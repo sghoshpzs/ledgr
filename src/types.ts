@@ -19,9 +19,10 @@ export interface Investment {
   debitBank?: string // your account the contribution is paid from
   fundHouse?: string // MUTUAL_FUND — list in config/dropdowns.ts
   bank?: string // PPF — list in config/dropdowns.ts
-  broker?: string // STOCK — list in config/dropdowns.ts
+  broker?: string // STOCK, or MUTUAL_FUND held in demat — list in config/dropdowns.ts
   folioNumber?: string // MUTUAL_FUND
   sipPaused?: boolean // MUTUAL_FUND: SIP stopped (absent = running)
+  dematHolding?: boolean // MUTUAL_FUND: units held in a demat account (broker + demat no. instead of folio)
   lastTxnDate?: string // MUTUAL_FUND, when paused: date of the last SIP instalment
   ppfAccountNumber?: string // PPF
   pran?: string // NPS — Permanent Retirement Account Number

@@ -5,11 +5,15 @@ import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, niceDate, pct } from '@/lib/format'
 import type { Investment } from '@/types'
 import { isFixedDeposit, marketReturn } from '@/lib/investments'
+import { RedeemSheet } from '@/components/RedeemSheet'
 import { BROKERS, FUND_HOUSES, PPF_BANKS, bankAccountOptions, toOptions } from '@/config/dropdowns'
 
 const LONG = ['MUTUAL_FUND', 'PPF', 'NPS', 'GRATUITY', 'STOCK']
 const SHORT = ['FD', 'RD', 'STOCK']
 const opts = (xs: string[]) => xs.map((v) => ({ value: v, label: label(v) }))
+
+/** Stocks, and mutual funds held in demat, sit with a broker in a demat account. */
+const inDemat = (d: Record<string, string>) => d.type === 'STOCK' || (d.type === 'MUTUAL_FUND' && d.dematHolding === 'true')
 
 const fields: Field[] = [
   { key: 'name', label: 'Name', type: 'text', required: true },
@@ -18,11 +22,13 @@ const fields: Field[] = [
   { key: 'type', label: 'Type', type: 'select', required: true, options: (d) => opts(d.horizon === 'short' ? SHORT : LONG) },
   { key: 'fundHouse', label: 'Fund house', type: 'select', required: true, options: toOptions(FUND_HOUSES), show: (d) => d.type === 'MUTUAL_FUND' },
   { key: 'bank', label: 'Bank', type: 'select', required: true, options: toOptions(PPF_BANKS), show: (d) => d.type === 'PPF' },
-  { key: 'broker', label: 'Broker', type: 'select', required: true, options: toOptions(BROKERS), show: (d) => d.type === 'STOCK' },
-  { key: 'folioNumber', label: 'Folio number', type: 'text', show: (d) => d.type === 'MUTUAL_FUND' },
+  { key: 'dematHolding', label: 'Demat holding', type: 'checkbox', show: (d) => d.type === 'MUTUAL_FUND',
+    hint: 'Units are held in your demat account (through a broker) instead of a folio.' },
+  { key: 'broker', label: 'Broker', type: 'select', required: true, options: toOptions(BROKERS), show: inDemat },
+  { key: 'folioNumber', label: 'Folio number', type: 'text', show: (d) => d.type === 'MUTUAL_FUND' && d.dematHolding !== 'true' },
   { key: 'ppfAccountNumber', label: 'PPF account number', type: 'text', show: (d) => d.type === 'PPF' },
   { key: 'pran', label: 'PRAN', type: 'text', hint: 'Permanent Retirement Account Number (12 digits).', show: (d) => d.type === 'NPS' },
-  { key: 'dematAccountNumber', label: 'Demat account number', type: 'text', hint: 'DP ID + Client ID (16 characters).', show: (d) => d.type === 'STOCK' },
+  { key: 'dematAccountNumber', label: 'Demat account number', type: 'text', hint: 'DP ID + Client ID (16 characters).', show: inDemat },
   { key: 'fdNumber', label: 'FD number', type: 'text', show: (d) => d.type === 'FD' },
   { key: 'rdNumber', label: 'RD number', type: 'text', show: (d) => d.type === 'RD' },
   { key: 'investedAmount', label: 'Amount invested (₹)', type: 'number', required: true, show: (d) => !isFixedDeposit(d) },
@@ -43,6 +49,7 @@ export default function Investments() {
   const [tab, setTab] = useState<'long' | 'short'>('long')
   const all = useTable('investments')
   const rows = useMemo(() => all?.filter((r) => r.horizon === tab), [all, tab])
+  const [redeeming, setRedeeming] = useState<Investment | null>(null)
 
   const market = marketReturn(rows ?? [])
   const fixed = rows?.filter(isFixedDeposit) ?? []
@@ -71,14 +78,16 @@ export default function Investments() {
         view={(r) => ({
           title: r.name,
           sub: [
-            label(r.type), r.fundHouse ?? r.bank ?? r.broker, r.maturityDate && `matures ${niceDate(r.maturityDate)}`,
+            label(r.type), r.fundHouse ?? r.bank ?? r.broker, r.type === 'MUTUAL_FUND' && r.dematHolding && `demat${r.broker ? ' · ' + r.broker : ''}`, r.maturityDate && `matures ${niceDate(r.maturityDate)}`,
             r.sipPaused && (r.lastTxnDate ? `SIP paused · last ${niceDate(r.lastTxnDate)}` : 'SIP paused'),
           ].filter(Boolean).join(' · '),
           ...(isFixedDeposit(r)
             ? { value: money(r.maturityAmount ?? r.currentValue ?? 0), valueSub: r.interestRate !== undefined ? `${r.interestRate}% p.a.` : 'at maturity' }
             : { value: money(r.currentValue ?? 0), valueSub: `invested ${money(r.investedAmount ?? 0)}` }),
         })}
+        actions={(r) => r.type === 'MUTUAL_FUND' && <button className="btn btn-small" onClick={() => setRedeeming(r)}>Redeem</button>}
       />
+      {redeeming && <RedeemSheet fund={redeeming} onClose={() => setRedeeming(null)} />}
     </>
   )
 }

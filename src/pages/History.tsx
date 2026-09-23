@@ -17,7 +17,7 @@ const HIDDEN = new Set(['liabilityId', 'investmentId']) // internal links, not m
 
 const KEY_LABEL: Record<string, string> = {
   pran: 'PRAN', fdNumber: 'FD number', rdNumber: 'RD number', ppfAccountNumber: 'PPF account number',
-  debitBank: 'Debit from', sipPaused: 'Paused', lastTxnDate: 'Last transaction date',
+  debitBank: 'Debit from', sipPaused: 'Paused', dematHolding: 'Demat holding', lastTxnDate: 'Last transaction date',
 }
 /** investedAmount -> "Invested amount" */
 const keyLabel = (k: string) => { if (KEY_LABEL[k]) return KEY_LABEL[k]; const w = k.replace(/([A-Z])/g, ' $1').toLowerCase(); return w[0].toUpperCase() + w.slice(1) }

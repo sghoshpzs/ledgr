@@ -43,7 +43,7 @@ function titleOf(row: DocumentData) {
  * Commits in the background. With Firestore's offline cache the change is visible immediately and the
  * promise only settles once the server confirms — awaiting it would freeze the UI while offline.
  */
-function commit(b: WriteBatch) {
+export function commit(b: WriteBatch) {
   b.commit().catch((e) => {
     console.error(e)
     alert('Could not save your change. Please check your connection and try again.')

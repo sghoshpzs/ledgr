@@ -3,7 +3,7 @@ export type InvestmentType = 'MUTUAL_FUND' | 'PPF' | 'NPS' | 'GRATUITY' | 'STOCK
 export type Horizon = 'long' | 'short'
 
 export interface Investment {
-  id?: number
+  id?: string
   name: string
   type: InvestmentType
   horizon: Horizon
@@ -26,7 +26,7 @@ export type LiabilityType =
 export type Frequency = 'monthly' | 'quarterly' | 'yearly'
 
 export interface Liability {
-  id?: number
+  id?: string
   name: string
   type: LiabilityType
   amount: number // per instalment / premium
@@ -63,21 +63,21 @@ export type DebitCategory =
   | 'OTHER'
 
 export interface Transaction {
-  id?: number
+  id?: string
   kind: 'credit' | 'debit'
   category: CreditSource | DebitCategory
   amount: number
   date: string
   note?: string
-  liabilityId?: number // optional link when a debit settles a liability
-  investmentId?: number // optional link when a credit/debit relates to an investment
+  liabilityId?: string // optional link when a debit settles a liability
+  investmentId?: string // optional link when a credit/debit relates to an investment
 }
 
 // ---------- Tracked items (renewals) ----------
 export type ItemType = 'VEHICLE_INSURANCE' | 'VEHICLE_PUC' | 'WARRANTY'
 
 export interface TrackedItem {
-  id?: number
+  id?: string
   name: string // e.g. "Swift – insurance", "Fridge warranty"
   type: ItemType
   reference?: string // policy no. / vehicle no. / serial no.

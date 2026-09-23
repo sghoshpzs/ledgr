@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db/db'
+import { useMemo, useState } from 'react'
+import { db, useTable } from '@/db/db'
 import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, niceDate, pct } from '@/lib/format'
@@ -26,7 +25,8 @@ const fields: Field[] = [
 
 export default function Investments() {
   const [tab, setTab] = useState<'long' | 'short'>('long')
-  const rows = useLiveQuery(() => db.investments.where('horizon').equals(tab).toArray(), [tab])
+  const all = useTable('investments')
+  const rows = useMemo(() => all?.filter((r) => r.horizon === tab), [all, tab])
 
   const invested = rows?.reduce((s, r) => s + r.investedAmount, 0) ?? 0
   const current = rows?.reduce((s, r) => s + r.currentValue, 0) ?? 0

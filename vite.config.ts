@@ -27,8 +27,12 @@ export default defineConfig({
           { src: 'icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
-      // App is fully offline: all data lives in IndexedDB, so precache the whole shell.
-      workbox: { globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'] },
+      // Precache the whole shell so the app opens offline; Firestore keeps its own offline cache.
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+        navigateFallbackDenylist: [/^\/__\//], // Firebase auth handler
+        maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
+      },
     }),
   ],
 })

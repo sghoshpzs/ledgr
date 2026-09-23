@@ -1,5 +1,5 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db/db'
+import { useMemo } from 'react'
+import { db, useTable } from '@/db/db'
 import { CrudList, type Field } from '@/components/CrudList'
 import { PageHead } from '@/components/ui'
 import { addMonths, daysUntil, label, money, niceDate, today } from '@/lib/format'
@@ -17,7 +17,8 @@ const fields: Field[] = [
 ]
 
 export default function Items() {
-  const rows = useLiveQuery(() => db.items.orderBy('expiryDate').toArray(), [])
+  const all = useTable('items')
+  const rows = useMemo(() => all && [...all].sort((a, b) => a.expiryDate.localeCompare(b.expiryDate)), [all])
 
   return (
     <>

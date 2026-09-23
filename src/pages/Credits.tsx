@@ -1,6 +1,5 @@
-import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db/db'
+import { useMemo, useState } from 'react'
+import { db, useTable } from '@/db/db'
 import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, monthKey, niceDate, today } from '@/lib/format'
@@ -22,7 +21,8 @@ type Filter = 'all' | 'credit' | 'debit'
 
 export default function Credits() {
   const [filter, setFilter] = useState<Filter>('all')
-  const all = useLiveQuery(() => db.transactions.orderBy('date').reverse().toArray(), [])
+  const tx = useTable('transactions')
+  const all = useMemo(() => tx && [...tx].sort((a, b) => b.date.localeCompare(a.date)), [tx])
   const rows = all?.filter((t) => filter === 'all' || t.kind === filter)
 
   const month = monthKey(today())

@@ -1,6 +1,13 @@
 # Personal Ledger (PWA skeleton)
 
-Offline-first personal finance + renewal tracker. React + TypeScript + Vite, data in IndexedDB (Dexie), installable via `vite-plugin-pwa`.
+Offline-first personal finance + renewal tracker. React + TypeScript + Vite, Google sign-in via Firebase Auth, data in Firestore (private per user, cached offline), installable via `vite-plugin-pwa`.
+
+## Firebase setup (once)
+
+1. Firebase console → your project → **Build → Authentication → Get started → Sign-in method → Google → Enable**.
+2. **Build → Firestore Database → Create database** in *production mode* (pick a region near you, e.g. `asia-south1`).
+3. **Project settings → General → Your apps → Add app → Web**. Copy the config values into `.env`.
+4. `npx firebase deploy --only firestore:rules` — publishes `firestore.rules` (each user can only access `users/{their uid}/…`).
 
 ## Run
 
@@ -29,7 +36,10 @@ Settings → **Load sample data** fills every screen with examples.
 ```
 src/
   types.ts                 all data shapes in one place
-  db/db.ts                 Dexie tables + export/import
+  lib/firebase.ts          Firebase app, auth, Firestore (offline cache)
+  lib/auth.tsx             sign-in state, Google sign-in, log out
+  db/db.ts                 per-user Firestore tables, useTable() hook, backup/restore
+  db/legacy.ts             one-time move of pre-login on-device data into the account
   db/seed.ts               sample data
   components/CrudList.tsx  generic list + add/edit sheet (driven by a field list)
   components/Layout.tsx    bottom tabs on phones, side rail on desktop
@@ -39,14 +49,15 @@ src/
 ```
 
 ### Adding a module
-Copy `pages/Items.tsx`: define a type in `types.ts`, add a table in `db/db.ts` (bump `version`), list its `fields` and a `view()` for the row, add a route in `App.tsx` and a tab in `Layout.tsx`.
+Copy `pages/Items.tsx`: define a type in `types.ts`, add its name to `TABLES` in `db/db.ts` and to the list in `firestore.rules`, list its `fields` and a `view()` for the row, add a route in `App.tsx` and a tab in `Layout.tsx`.
 
 ## Deploy
-PWAs need HTTPS (localhost is exempt). Any static host works (Netlify, Cloudflare Pages, GitHub Pages with an SPA fallback).
+Firebase Hosting: `npm run deploy` (hosting + Firestore rules). Pushes to `master` also deploy hosting via `.github/workflows/firebase-deploy.yml`; rules are deployed only by `npm run deploy` / `npx firebase deploy --only firestore:rules`.
+PWAs need HTTPS (localhost is exempt). If you host elsewhere, add that domain under Authentication → Settings → Authorized domains.
 A `Dockerfile` + `nginx.conf` are included for a container image (nginx-unprivileged on 8080, SPA fallback, no-cache on `sw.js`) — untested here.
 
 ## Known limits / next steps
-- **Data lives only on the device.** Use Settings → Download backup. For multi-device sync, put Supabase/PocketBase/CouchDB (PouchDB) behind the same table shapes.
+- Data is stored in Firestore under `users/{uid}` and synced across the user's devices. Settings → Download backup still exports a JSON copy.
 - **Reminders fire only when the app is opened.** Reliable background reminders need Web Push and a small server.
-- No login or encryption at rest yet. If the phone is shared, add an app PIN and encrypt with the Web Crypto API.
+- Log out clears the on-device Firestore cache, so a shared device keeps nothing behind.
 - Ideas: auto-refresh NAV/stock prices, XIRR per investment, EMI amortisation (reduce `outstanding` when marking paid), recurring transactions, budgets per category, attach policy PDFs to renewals (store Blobs in IndexedDB), unit tests for `buildUpcoming`.

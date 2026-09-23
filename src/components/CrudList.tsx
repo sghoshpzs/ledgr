@@ -1,5 +1,5 @@
 import { useState, type FormEvent, type ReactNode } from 'react'
-import type { EntityTable } from 'dexie'
+import type { Table } from '@/db/db'
 import { Icon } from '@/components/Icon'
 import { Badge, type Tone } from '@/components/ui'
 
@@ -25,8 +25,8 @@ export interface RowView {
   badge?: { text: string; tone: Tone }
 }
 
-interface Props<T extends { id?: number }> {
-  table: EntityTable<T, 'id'>
+interface Props<T extends { id?: string }> {
+  table: Table<T>
   rows: T[] | undefined
   fields: Field[]
   /** Initial values for the "add" form. */
@@ -44,7 +44,7 @@ const optionsOf = (f: Field, d: Draft): Option[] =>
  * One generic list + add/edit sheet. Every module (investments, liabilities, items, transactions)
  * is just a field list and a row renderer on top of this — copy a page to add a new module.
  */
-export function CrudList<T extends { id?: number }>({
+export function CrudList<T extends { id?: string }>({
   table, rows, fields, defaults, view, noun, empty, actions,
 }: Props<T>) {
   const [editing, setEditing] = useState<T | 'new' | null>(null)
@@ -89,7 +89,7 @@ export function CrudList<T extends { id?: number }>({
   }
 
   const remove = async (row: T) => {
-    if (row.id !== undefined && confirm(`Delete this ${noun}?`)) await table.delete(row.id as never)
+    if (row.id !== undefined && confirm(`Delete this ${noun}?`)) await table.delete(row.id)
   }
 
   return (

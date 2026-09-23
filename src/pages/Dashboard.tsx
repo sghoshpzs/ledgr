@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
-import { useLiveQuery } from 'dexie-react-hooks'
+import { useMemo } from 'react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { db } from '@/db/db'
+import { useTable } from '@/db/db'
 import { Badge, PageHead, Stat } from '@/components/ui'
 import { useUpcoming } from '@/lib/upcoming'
 import { CHART_COLORS } from '@/lib/palette'
@@ -9,8 +9,11 @@ import { label, money, moneyShort, monthKey, monthlyEquivalent, niceDate, pct, t
 
 export default function Dashboard() {
   const upcoming = useUpcoming()
-  const s = useLiveQuery(async () => {
-    const [inv, liab, tx] = await Promise.all([db.investments.toArray(), db.liabilities.toArray(), db.transactions.toArray()])
+  const inv = useTable('investments')
+  const liab = useTable('liabilities')
+  const tx = useTable('transactions')
+  const s = useMemo(() => {
+    if (!inv || !liab || !tx) return undefined
     const invested = inv.reduce((a, i) => a + i.investedAmount, 0)
     const current = inv.reduce((a, i) => a + i.currentValue, 0)
     const byType = Object.entries(inv.reduce<Record<string, number>>((m, i) => ({ ...m, [i.type]: (m[i.type] ?? 0) + i.currentValue }), {}))
@@ -23,7 +26,7 @@ export default function Dashboard() {
       credits: m.filter((t) => t.kind === 'credit').reduce((a, t) => a + t.amount, 0),
       debits: m.filter((t) => t.kind === 'debit').reduce((a, t) => a + t.amount, 0),
     }
-  }, [])
+  }, [inv, liab, tx])
 
   const gain = s && s.invested ? ((s.current - s.invested) / s.invested) * 100 : 0
 

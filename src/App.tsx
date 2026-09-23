@@ -7,8 +7,14 @@ import Credits from '@/pages/Credits'
 import Monthly from '@/pages/Monthly'
 import Items from '@/pages/Items'
 import Settings from '@/pages/Settings'
+import Login from '@/pages/Login'
+import { useAuth } from '@/lib/auth'
 
 export default function App() {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="splash" aria-busy="true">Ledger</div>
+  if (!user) return <Login />
+
   return (
     <Routes>
       <Route element={<Layout />}>

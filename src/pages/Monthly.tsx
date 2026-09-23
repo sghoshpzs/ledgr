@@ -1,20 +1,18 @@
-import { useState } from 'react'
-import { useLiveQuery } from 'dexie-react-hooks'
+import { useMemo, useState } from 'react'
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
-import { db } from '@/db/db'
+import { useTable } from '@/db/db'
 import { PageHead, Stat } from '@/components/ui'
 import { CHART_COLORS } from '@/lib/palette'
 import { label, money, monthlyEquivalent, monthKey, today } from '@/lib/format'
 
 export default function Monthly() {
   const [month, setMonth] = useState(monthKey(today()))
-  const data = useLiveQuery(async () => {
-    const [tx, liabs] = await Promise.all([
-      db.transactions.where('date').between(`${month}-01`, `${month}-32`, true, true).toArray(),
-      db.liabilities.toArray(),
-    ])
-    return { tx, committed: liabs.reduce((s, l) => s + monthlyEquivalent(l.amount, l.frequency), 0) }
-  }, [month])
+  const allTx = useTable('transactions')
+  const liabs = useTable('liabilities')
+  const data = useMemo(() => allTx && liabs && {
+    tx: allTx.filter((t) => monthKey(t.date) === month),
+    committed: liabs.reduce((s, l) => s + monthlyEquivalent(l.amount, l.frequency), 0),
+  }, [allTx, liabs, month])
 
   const tx = data?.tx ?? []
   const totalOf = (kind: 'credit' | 'debit') => tx.filter((t) => t.kind === kind).reduce((s, t) => s + t.amount, 0)

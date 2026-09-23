@@ -1,5 +1,5 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db/db'
+import { useMemo } from 'react'
+import { batch, db, useTable } from '@/db/db'
 import { CrudList, type Field } from '@/components/CrudList'
 import { PageHead, Stat } from '@/components/ui'
 import { addMonths, daysUntil, label, money, monthlyEquivalent, niceDate, today } from '@/lib/format'
@@ -22,19 +22,20 @@ const fields: Field[] = [
 
 /** Records a debit and moves the due date forward by one period. */
 async function markPaid(l: Liability) {
-  await db.transaction('rw', db.liabilities, db.transactions, async () => {
-    await db.transactions.add({
-      kind: 'debit',
-      category: l.type.includes('INSURANCE') ? 'INSURANCE' : 'EMI',
-      amount: l.amount, date: today(), note: l.name, liabilityId: l.id,
-    })
-    await db.liabilities.update(l.id!, { nextDueDate: addMonths(l.nextDueDate, STEP[l.frequency]) })
-    // TODO: for loans, reduce `outstanding` using your lender's amortisation schedule.
+  const b = batch()
+  db.transactions.addIn(b, {
+    kind: 'debit',
+    category: l.type.includes('INSURANCE') ? 'INSURANCE' : 'EMI',
+    amount: l.amount, date: today(), note: l.name, liabilityId: l.id,
   })
+  db.liabilities.updateIn(b, l.id!, { nextDueDate: addMonths(l.nextDueDate, STEP[l.frequency]) })
+  // TODO: for loans, reduce `outstanding` using your lender's amortisation schedule.
+  await b.commit()
 }
 
 export default function Liabilities() {
-  const rows = useLiveQuery(() => db.liabilities.orderBy('nextDueDate').toArray(), [])
+  const all = useTable('liabilities')
+  const rows = useMemo(() => all && [...all].sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate)), [all])
   const monthly = rows?.reduce((s, r) => s + monthlyEquivalent(r.amount, r.frequency), 0) ?? 0
   const owed = rows?.reduce((s, r) => s + (r.outstanding ?? 0), 0) ?? 0
 

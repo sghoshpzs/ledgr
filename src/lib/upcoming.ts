@@ -1,5 +1,5 @@
-import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '@/db/db'
+import { useMemo } from 'react'
+import { useTable } from '@/db/db'
 import { daysUntil, label } from '@/lib/format'
 import type { Investment, Liability, TrackedItem } from '@/types'
 
@@ -53,8 +53,8 @@ export function buildUpcoming(
 }
 
 export function useUpcoming() {
-  return useLiveQuery(async () => {
-    const [l, i, t] = await Promise.all([db.liabilities.toArray(), db.investments.toArray(), db.items.toArray()])
-    return buildUpcoming(l, i, t)
-  }, [], [] as Upcoming[])
+  const l = useTable('liabilities')
+  const i = useTable('investments')
+  const t = useTable('items')
+  return useMemo(() => (l && i && t ? buildUpcoming(l, i, t) : []), [l, i, t])
 }

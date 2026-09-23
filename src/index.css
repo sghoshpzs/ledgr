@@ -68,8 +68,21 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .avatar:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .user-pop {
   position: absolute; right: 0; top: calc(100% + 6px); background: var(--surface); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 6px; box-shadow: 0 6px 18px rgb(0 0 0 / .14); white-space: nowrap;
+  border-radius: var(--radius); padding: 10px 12px; box-shadow: 0 6px 18px rgb(0 0 0 / .14); white-space: nowrap;
+  display: grid; gap: 2px; justify-items: start; min-width: 180px;
 }
+.user-pop-name { font-weight: 600; font-size: 14px; }
+.user-pop-email { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+
+/* ---------- sign-in ---------- */
+.splash, .login { min-height: 100vh; display: grid; place-items: center; padding: 16px; }
+.splash { color: var(--brand); font-weight: 700; font-size: 20px; }
+.login-card {
+  width: 100%; max-width: 360px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px;
+  padding: 28px 24px; display: grid; gap: 14px; text-align: center;
+}
+.brand-mark { font-weight: 700; font-size: 26px; color: var(--brand); }
+.google-btn { display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: 600; padding: 11px 14px; }
 
 @media (min-width: 900px) {
   .shell { display: grid; grid-template-columns: 220px minmax(0, 820px); justify-content: center; }

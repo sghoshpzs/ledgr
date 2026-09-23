@@ -4,6 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { useTable } from '@/db/db'
 import { Badge, PageHead, Stat } from '@/components/ui'
 import { useUpcoming } from '@/lib/upcoming'
+import { marketReturn, valueOf } from '@/lib/investments'
 import { balanceByBank, NOT_SET } from '@/lib/banks'
 import { txInMonth } from '@/lib/recurring'
 import { CHART_COLORS } from '@/lib/palette'
@@ -18,13 +19,13 @@ export default function Dashboard() {
   const banks = useMemo(() => (inv && liab && tx && items ? balanceByBank(liab, inv, items, tx) : []), [inv, liab, tx, items])
   const s = useMemo(() => {
     if (!inv || !liab || !tx) return undefined
-    const invested = inv.reduce((a, i) => a + i.investedAmount, 0)
-    const current = inv.reduce((a, i) => a + i.currentValue, 0)
-    const byType = Object.entries(inv.reduce<Record<string, number>>((m, i) => ({ ...m, [i.type]: (m[i.type] ?? 0) + i.currentValue }), {}))
+    const market = marketReturn(inv) // gain % is for market-linked investments only
+    const current = inv.reduce((a, i) => a + valueOf(i), 0)
+    const byType = Object.entries(inv.reduce<Record<string, number>>((m, i) => ({ ...m, [i.type]: (m[i.type] ?? 0) + valueOf(i) }), {}))
       .map(([k, v]) => ({ name: label(k), value: v })).sort((a, b) => b.value - a.value)
     const m = txInMonth(tx, monthKey(today()))
     return {
-      invested, current, byType,
+      market, current, byType,
       owed: liab.reduce((a, l) => a + (l.outstanding ?? 0), 0),
       committed: liab.reduce((a, l) => a + monthlyEquivalent(l.amount, l.frequency), 0),
       credits: m.filter((t) => t.kind === 'credit').reduce((a, t) => a + t.amount, 0),
@@ -32,7 +33,6 @@ export default function Dashboard() {
     }
   }, [inv, liab, tx])
 
-  const gain = s && s.invested ? ((s.current - s.invested) / s.invested) * 100 : 0
 
   return (
     <>
@@ -67,7 +67,9 @@ export default function Dashboard() {
       {s && (
         <>
           <div className="stats">
-            <Stat label="Investments" value={moneyShort(s.current)} sub={`${pct(gain)} on ${moneyShort(s.invested)} invested`} tone={gain >= 0 ? 'ok' : 'bad'} />
+            <Stat label="Investments" value={moneyShort(s.current)}
+              sub={s.market.count ? `${pct(s.market.pct)} on ${moneyShort(s.market.invested)} invested (excl. FD & RD)` : 'FD & RD at maturity value'}
+              tone={s.market.count ? (s.market.pct >= 0 ? 'ok' : 'bad') : undefined} />
             <Stat label="Loans outstanding" value={moneyShort(s.owed)} sub={`${moneyShort(s.committed)} a month committed`} />
             <Stat label="This month" value={money(s.credits - s.debits)} sub={`${moneyShort(s.credits)} in · ${moneyShort(s.debits)} out`} tone={s.credits - s.debits >= 0 ? 'ok' : 'bad'} />
           </div>

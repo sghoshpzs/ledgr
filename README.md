@@ -58,8 +58,13 @@ Firebase Hosting: `npm run deploy` (hosting + Firestore rules). Pushes to `maste
 PWAs need HTTPS (localhost is exempt). If you host elsewhere, add that domain under Authentication → Settings → Authorized domains.
 A `Dockerfile` + `nginx.conf` are included for a container image (nginx-unprivileged on 8080, SPA fallback, no-cache on `sw.js`) — untested here.
 
+## Security
+- **Single owner.** `firestore.rules` allows only the owner's verified Google account (`OWNER_EMAIL` in that file) to read/write, and only under `users/{their uid}`. After sign-in the app makes one test read; any other account is refused by the server and signed out.
+- **Content-Security-Policy** is added to the built `index.html` by `cspPlugin` in `vite.config.ts` (not in dev). If you add a new external service, allow its domain there.
+- **Headers** (HSTS, nosniff, referrer and permissions policy) are set for every URL in `firebase.json`. Anti-framing is done in `src/main.tsx` instead of a header, because a site-wide `X-Frame-Options` would break Firebase's sign-in frame under `/__/auth/`.
+- Logging out clears the on-device Firestore cache.
+
 ## Known limits / next steps
 - Data is stored in Firestore under `users/{uid}` and synced across the user's devices. Settings → Download backup still exports a JSON copy.
 - **Reminders fire only when the app is opened.** Reliable background reminders need Web Push and a small server.
-- Log out clears the on-device Firestore cache, so a shared device keeps nothing behind.
 - Ideas: auto-refresh NAV/stock prices, XIRR per investment, EMI amortisation (reduce `outstanding` when marking paid), recurring transactions, budgets per category, attach policy PDFs to renewals (store Blobs in IndexedDB), unit tests for `buildUpcoming`.

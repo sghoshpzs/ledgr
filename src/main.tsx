@@ -8,6 +8,10 @@ import '@/index.css'
 
 registerSW({ immediate: true }) // registers the service worker → offline + installable
 
+// Refuse to run inside another site's frame (clickjacking). A <meta> CSP can't set frame-ancestors,
+// and a site-wide header would also block Firebase's own sign-in frame — so guard here.
+if (window.top !== window.self) throw new Error('Ledger cannot be embedded in another page.')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AuthProvider>

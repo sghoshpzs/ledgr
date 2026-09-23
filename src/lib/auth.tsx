@@ -1,14 +1,35 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { GoogleAuthProvider, onAuthStateChanged, signInWithPopup, signInWithRedirect, signOut, type User } from 'firebase/auth'
-import { clearIndexedDbPersistence, terminate, waitForPendingWrites } from 'firebase/firestore'
+import { clearIndexedDbPersistence, collection, getDocs, limit, query, terminate, waitForPendingWrites } from 'firebase/firestore'
 import { auth, fs } from '@/lib/firebase'
 
-interface AuthState { user: User | null; loading: boolean }
+/** `denied` holds the email of an account that signed in but is not allowed to use the app. */
+interface AuthState { user: User | null; loading: boolean; denied?: string }
 const AuthContext = createContext<AuthState>({ user: null, loading: true })
+
+/**
+ * Access is decided by firestore.rules (only the owner's account). After sign-in we make one tiny
+ * read: if the server refuses it, the account isn't allowed, so it is signed straight back out.
+ * This keeps the owner's email out of the app code — the rules are the single source of truth.
+ */
+async function isAllowed(user: User) {
+  try {
+    await getDocs(query(collection(fs, 'users', user.uid, 'history'), limit(1)))
+    return true
+  } catch (e) {
+    return (e as { code?: string }).code !== 'permission-denied' // offline etc. — let the cache work
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({ user: auth.currentUser, loading: true })
-  useEffect(() => onAuthStateChanged(auth, (user) => setState({ user, loading: false })), [])
+  useEffect(() => onAuthStateChanged(auth, async (user) => {
+    if (!user) return setState((s) => ({ user: null, loading: false, denied: s.denied }))
+    setState({ user: null, loading: true })
+    if (await isAllowed(user)) return setState({ user, loading: false })
+    await signOut(auth)
+    setState({ user: null, loading: false, denied: user.email ?? 'This account' })
+  }), [])
   return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>
 }
 

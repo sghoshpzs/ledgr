@@ -9,8 +9,9 @@ export interface Investment {
   name: string
   type: InvestmentType
   horizon: Horizon
-  investedAmount: number
-  currentValue: number
+  investedAmount?: number // not used for FD / RD
+  currentValue?: number // not used for FD / RD
+  maturityAmount?: number // FD / RD: the one amount tracked — what it pays out at maturity
   startDate: string // ISO yyyy-mm-dd
   maturityDate?: string
   interestRate?: number // % p.a. — FD / RD / PPF
@@ -20,6 +21,8 @@ export interface Investment {
   bank?: string // PPF — list in config/dropdowns.ts
   broker?: string // STOCK — list in config/dropdowns.ts
   folioNumber?: string // MUTUAL_FUND
+  sipPaused?: boolean // MUTUAL_FUND: SIP stopped (absent = running)
+  lastTxnDate?: string // MUTUAL_FUND, when paused: date of the last SIP instalment
   ppfAccountNumber?: string // PPF
   pran?: string // NPS — Permanent Retirement Account Number
   dematAccountNumber?: string // STOCK — DP ID + client ID

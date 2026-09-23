@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useTable } from '@/db/db'
 import { daysUntil, label, today, toISO } from '@/lib/format'
 import { recurringBetween } from '@/lib/recurring'
+import { valueOf } from '@/lib/investments'
 import type { Investment, Liability, TrackedItem, Transaction } from '@/types'
 
 export interface Upcoming {
@@ -50,7 +51,7 @@ export function buildUpcoming(
     if (days >= 0 && days <= maturityWindow)
       out.push({
         id: `i-${i.id}`, date: i.maturityDate, days, title: `${i.name} matures`, detail: label(i.type),
-        amount: i.currentValue, kind: 'maturity', to: '/invest',
+        amount: valueOf(i), kind: 'maturity', to: '/invest',
       })
   }
   for (const t of items) {

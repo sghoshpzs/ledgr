@@ -1,11 +1,19 @@
 rules_version = '2';
 
-// Each signed-in user can read and write only their own users/{uid}/... data.
-// Everything else is denied.
+// Private, single-owner app. Only the owner's verified Google account can read or write, and only
+// inside its own users/{uid} subtree. Everything else — other accounts, other paths — is denied.
+// To change the owner, edit OWNER_EMAIL below and run: npx firebase deploy --only firestore:rules
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isOwner() {
+      return request.auth != null
+        && request.auth.token.email == 's.ghosh.pzs@gmail.com'   // OWNER_EMAIL
+        && request.auth.token.email_verified == true
+        && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
     match /users/{uid}/{table}/{docId} {
-      allow read, write: if request.auth != null
+      allow read, write: if isOwner()
         && request.auth.uid == uid
         && table in ['investments', 'liabilities', 'transactions', 'items', 'history'];
     }

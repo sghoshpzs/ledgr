@@ -5,6 +5,7 @@ import { PageHead, Stat } from '@/components/ui'
 import { BankChart } from '@/components/BankChart'
 import { monthNeedByBank } from '@/lib/banks'
 import { txInMonth } from '@/lib/recurring'
+import { contributesIn } from '@/lib/investments'
 import { CHART_COLORS } from '@/lib/palette'
 import { label, money, monthlyEquivalent, monthKey, today } from '@/lib/format'
 
@@ -28,11 +29,11 @@ export default function Monthly() {
     tx.filter((t) => t.kind === 'debit').reduce<Record<string, number>>((m, t) => ({ ...m, [t.category]: (m[t.category] ?? 0) + t.amount }), {}),
   ).map(([k, v]) => ({ name: label(k), value: v })).sort((a, b) => b.value - a.value)
 
-  // Invested = debits in the Investment category; planned = SIP / RD / NPS contributions active this month.
-  const invested = tx.filter((t) => t.kind === 'debit' && t.category === 'INVESTMENT').reduce((s, t) => s + t.amount, 0)
-  const monthEnd = `${month}-31`
-  const planned = invs?.filter((i) => i.monthlyContribution && i.startDate <= monthEnd && !(i.maturityDate && i.maturityDate < `${month}-01`))
-    .reduce((s, i) => s + (i.monthlyContribution ?? 0), 0) ?? 0
+  // Invested = running (not paused) mutual-fund SIPs of the month + debits logged in the Investment category.
+  const sips = invs?.filter((i) => i.type === 'MUTUAL_FUND' && contributesIn(i, month)) ?? []
+  const sipTotal = sips.reduce((s, i) => s + (i.monthlyContribution ?? 0), 0)
+  const loggedInvest = tx.filter((t) => t.kind === 'debit' && t.category === 'INVESTMENT').reduce((s, t) => s + t.amount, 0)
+  const invested = sipTotal + loggedInvest
 
   const banks = useMemo(
     () => (allTx && liabs && invs && items ? monthNeedByBank(month, liabs, invs, items, allTx) : undefined),
@@ -52,7 +53,8 @@ export default function Monthly() {
       <div className="stats">
         <Stat label="Credited" value={money(credits)} tone="ok" />
         <Stat label="Spent" value={money(debits)} />
-        <Stat label="Invested" value={money(invested)} sub={planned ? `${money(planned)} planned in SIP, RD, NPS` : 'debits in Investment category'} />
+        <Stat label="Invested" value={money(invested)}
+          sub={[sips.length && `${money(sipTotal)} in ${sips.length} SIP${sips.length === 1 ? '' : 's'}`, loggedInvest && `${money(loggedInvest)} logged`].filter(Boolean).join(' + ') || 'no SIPs or investment debits'} />
         <Stat label="Saved" value={money(saved)} sub={credits ? `${rate.toFixed(0)}% of credits` : undefined} tone={saved >= 0 ? 'ok' : 'bad'} />
         <Stat label="Recurring expenses" value={money(recurring)} sub="debits marked Recurring" />
         <Stat label="Fixed commitments" value={money(data?.committed ?? 0)} sub="EMIs + premiums, per month" />

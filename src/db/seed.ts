@@ -15,8 +15,8 @@ export async function seedDemo() {
     { name: 'NPS Tier I', type: 'NPS', pran: '110012345678', horizon: 'long', investedAmount: 180000, currentValue: 214000, startDate: mo(-36), monthlyContribution: 5000, debitBank: 'HDFC Bank' },
     { name: 'Gratuity (employer)', type: 'GRATUITY', horizon: 'long', investedAmount: 0, currentValue: 240000, startDate: mo(-60) },
     { name: 'Direct equity', type: 'STOCK', broker: 'Zerodha', dematAccountNumber: '1208160012345678', horizon: 'long', investedAmount: 200000, currentValue: 231000, startDate: mo(-20) },
-    { name: 'FD – HDFC 1y', type: 'FD', fdNumber: '50300012345678', horizon: 'short', investedAmount: 200000, currentValue: 206500, startDate: mo(-9), interestRate: 7.0, maturityDate: mo(3) },
-    { name: 'RD – Post office', type: 'RD', rdNumber: 'RD-0012345', horizon: 'short', investedAmount: 60000, currentValue: 62400, startDate: mo(-10), interestRate: 6.7, monthlyContribution: 6000, maturityDate: day(45), debitBank: 'State Bank of India' },
+    { name: 'FD – HDFC 1y', type: 'FD', fdNumber: '50300012345678', horizon: 'short', maturityAmount: 214400, startDate: mo(-9), interestRate: 7.0, maturityDate: mo(3) },
+    { name: 'RD – Post office', type: 'RD', rdNumber: 'RD-0012345', horizon: 'short', maturityAmount: 74600, startDate: mo(-10), interestRate: 6.7, monthlyContribution: 6000, maturityDate: day(45), debitBank: 'State Bank of India' },
   ]
   const liabilities: Liability[] = [
     { name: 'Home loan – HDFC', type: 'HOME_LOAN_EMI', bank: 'HDFC Bank', debitBank: 'HDFC Bank', amount: 38500, frequency: 'monthly', nextDueDate: day(4), outstanding: 3200000, endDate: mo(180) },

@@ -4,7 +4,7 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { PageHead, Stat } from '@/components/ui'
 import { addMonths, daysUntil, label, money, monthlyEquivalent, niceDate, today } from '@/lib/format'
 import type { Liability } from '@/types'
-import { HEALTH_INSURERS, LOAN_BANKS, MOTOR_INSURERS, toOptions } from '@/config/dropdowns'
+import { HEALTH_INSURERS, LOAN_BANKS, MOTOR_INSURERS, bankAccountOptions, toOptions } from '@/config/dropdowns'
 
 const TYPES = ['HOME_LOAN_EMI', 'CAR_LOAN_EMI', 'CREDIT_CARD_EMI', 'HEALTH_INSURANCE', 'CAR_INSURANCE']
 const STEP = { monthly: 1, quarterly: 3, yearly: 12 } as const
@@ -19,6 +19,7 @@ const fields: Field[] = [
   { key: 'frequency', label: 'How often', type: 'select', required: true,
     options: [{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'yearly', label: 'Yearly' }] },
   { key: 'nextDueDate', label: 'Next due date', type: 'date', required: true },
+  { key: 'debitBank', label: 'Debit from (your bank)', type: 'select', options: bankAccountOptions(), hint: 'Account the EMI / premium is debited from.' },
   { key: 'outstanding', label: 'Outstanding balance (₹)', type: 'number', show: (d) => d.type.endsWith('_EMI') },
   { key: 'endDate', label: 'Last payment date', type: 'date', show: (d) => d.type.endsWith('_EMI') },
   { key: 'notes', label: 'Notes', type: 'textarea' },
@@ -30,7 +31,7 @@ async function markPaid(l: Liability) {
   db.transactions.addIn(b, {
     kind: 'debit',
     category: l.type.includes('INSURANCE') ? 'INSURANCE' : 'EMI',
-    amount: l.amount, date: today(), note: l.name, liabilityId: l.id,
+    amount: l.amount, date: today(), note: l.name, liabilityId: l.id, debitBank: l.debitBank,
   })
   db.liabilities.updateIn(b, l, { nextDueDate: addMonths(l.nextDueDate, STEP[l.frequency]) })
   // TODO: for loans, reduce `outstanding` using your lender's amortisation schedule.

@@ -10,7 +10,7 @@ type Draft = Record<string, string>
 export interface Field {
   key: string
   label: string
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea'
+  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox'
   options?: Option[] | ((draft: Draft) => Option[])
   required?: boolean
   hint?: string
@@ -100,7 +100,7 @@ export function CrudList<T extends { id?: string }>({
       if (f.show && !f.show(draft)) { delete out[f.key]; continue }
       const raw = (draft[f.key] ?? '').trim()
       if (raw === '') delete out[f.key]
-      else out[f.key] = f.type === 'number' ? Number(raw) : raw
+      else out[f.key] = f.type === 'number' ? Number(raw) : f.type === 'checkbox' ? true : raw
     }
     if (editing === 'new') table.add(out as T)
     else if (editing) table.put(out as T, editing)
@@ -152,7 +152,12 @@ export function CrudList<T extends { id?: string }>({
               </button>
             </div>
             <div className="sheet-body">
-              {fields.filter((f) => !f.show || f.show(draft)).map((f) => (
+              {fields.filter((f) => !f.show || f.show(draft)).map((f) => f.type === 'checkbox' ? (
+                <label key={f.key} className="field-check">
+                  <input type="checkbox" checked={draft[f.key] === 'true'} onChange={(e) => setField(f.key, e.target.checked ? 'true' : '')} />
+                  <span>{f.label}{f.hint && <small>{f.hint}</small>}</span>
+                </label>
+              ) : (
                 <label key={f.key} className="field">
                   <span>{f.label}</span>
                   {f.type === 'select' ? (

@@ -4,16 +4,17 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, monthKey, niceDate, today } from '@/lib/format'
 import type { Transaction } from '@/types'
+import { CREDIT_SOURCES, DEBIT_CATEGORIES, bankAccountOptions } from '@/config/dropdowns'
 
-export const CREDIT_SOURCES = ['SALARY', 'MF_REDEMPTION', 'FD_MATURITY', 'RD_MATURITY', 'PPF_MATURITY', 'NPS_WITHDRAWAL', 'GRATUITY', 'DIVIDEND', 'STOCK_SALE', 'OTHER']
-export const DEBIT_CATEGORIES = ['EMI', 'INSURANCE', 'INVESTMENT', 'GROCERIES', 'UTILITIES', 'TRANSPORT', 'EATING_OUT', 'SHOPPING', 'HEALTH', 'OTHER']
-const opts = (xs: string[]) => xs.map((v) => ({ value: v, label: label(v) }))
+const opts = (xs: readonly string[]) => xs.map((v) => ({ value: v, label: label(v) }))
 
 const fields: Field[] = [
   { key: 'kind', label: 'Type', type: 'select', required: true, options: [{ value: 'credit', label: 'Credit (money in)' }, { value: 'debit', label: 'Debit (money out)' }] },
   { key: 'category', label: 'Category', type: 'select', required: true, options: (d) => opts(d.kind === 'debit' ? DEBIT_CATEGORIES : CREDIT_SOURCES) },
   { key: 'amount', label: 'Amount (₹)', type: 'number', required: true },
   { key: 'date', label: 'Date', type: 'date', required: true },
+  { key: 'debitBank', label: 'Debit from (your bank)', type: 'select', options: bankAccountOptions(), show: (d) => d.kind === 'debit' },
+  { key: 'recurring', label: 'Recurring', type: 'checkbox', hint: 'A fixed expense that repeats every month (rent, fees, bills, subscriptions).', show: (d) => d.kind === 'debit' },
   { key: 'note', label: 'Note', type: 'text' },
 ]
 
@@ -48,7 +49,7 @@ export default function Credits() {
         empty="Nothing here yet. Add your salary credit first, then investment credits and spending."
         view={(t) => ({
           title: t.note || label(t.category),
-          sub: `${label(t.category)} · ${niceDate(t.date)}`,
+          sub: [label(t.category), niceDate(t.date), t.debitBank, t.recurring && 'recurring'].filter(Boolean).join(' · '),
           value: `${t.kind === 'credit' ? '+' : '−'}${money(t.amount)}`,
           badge: { text: t.kind, tone: t.kind === 'credit' ? 'ok' : 'info' },
         })}

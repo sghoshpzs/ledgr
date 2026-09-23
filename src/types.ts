@@ -1,3 +1,5 @@
+import type { CREDIT_SOURCES, DEBIT_CATEGORIES } from '@/config/dropdowns'
+
 // ---------- Investments ----------
 export type InvestmentType = 'MUTUAL_FUND' | 'PPF' | 'NPS' | 'GRATUITY' | 'STOCK' | 'FD' | 'RD'
 export type Horizon = 'long' | 'short'
@@ -13,6 +15,7 @@ export interface Investment {
   maturityDate?: string
   interestRate?: number // % p.a. — FD / RD / PPF
   monthlyContribution?: number // RD / SIP / NPS
+  debitBank?: string // your account the contribution is paid from
   fundHouse?: string // MUTUAL_FUND — list in config/dropdowns.ts
   bank?: string // PPF — list in config/dropdowns.ts
   notes?: string
@@ -34,6 +37,7 @@ export interface Liability {
   amount: number // per instalment / premium
   frequency: Frequency
   nextDueDate: string // advances by `frequency` each time you mark it paid
+  debitBank?: string // your account the payment is debited from
   bank?: string // *_EMI — list in config/dropdowns.ts
   insurer?: string // *_INSURANCE — list in config/dropdowns.ts
   outstanding?: number
@@ -42,29 +46,9 @@ export interface Liability {
 }
 
 // ---------- Transactions (credits + debits) ----------
-export type CreditSource =
-  | 'SALARY'
-  | 'MF_REDEMPTION'
-  | 'FD_MATURITY'
-  | 'RD_MATURITY'
-  | 'PPF_MATURITY'
-  | 'NPS_WITHDRAWAL'
-  | 'GRATUITY'
-  | 'DIVIDEND'
-  | 'STOCK_SALE'
-  | 'OTHER'
-
-export type DebitCategory =
-  | 'EMI'
-  | 'INSURANCE'
-  | 'INVESTMENT'
-  | 'GROCERIES'
-  | 'UTILITIES'
-  | 'TRANSPORT'
-  | 'EATING_OUT'
-  | 'SHOPPING'
-  | 'HEALTH'
-  | 'OTHER'
+// Category lists live in config/dropdowns.ts so they can be edited in one place.
+export type CreditSource = (typeof CREDIT_SOURCES)[number]
+export type DebitCategory = (typeof DEBIT_CATEGORIES)[number]
 
 export interface Transaction {
   id?: string
@@ -73,6 +57,8 @@ export interface Transaction {
   amount: number
   date: string
   note?: string
+  recurring?: boolean // fixed expense that repeats every month
+  debitBank?: string // your account it is paid from — config/dropdowns.ts MY_BANK_ACCOUNTS
   liabilityId?: string // optional link when a debit settles a liability
   investmentId?: string // optional link when a credit/debit relates to an investment
 }
@@ -88,6 +74,7 @@ export interface TrackedItem {
   expiryDate: string
   remindDaysBefore: number
   cost?: number
+  debitBank?: string // your account the renewal is paid from
   notes?: string
 }
 

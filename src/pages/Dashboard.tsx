@@ -4,6 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { useTable } from '@/db/db'
 import { Badge, PageHead, Stat } from '@/components/ui'
 import { useUpcoming } from '@/lib/upcoming'
+import { balanceByBank, NOT_SET } from '@/lib/banks'
 import { CHART_COLORS } from '@/lib/palette'
 import { label, money, moneyShort, monthKey, monthlyEquivalent, niceDate, pct, today } from '@/lib/format'
 
@@ -12,6 +13,8 @@ export default function Dashboard() {
   const inv = useTable('investments')
   const liab = useTable('liabilities')
   const tx = useTable('transactions')
+  const items = useTable('items')
+  const banks = useMemo(() => (inv && liab && tx && items ? balanceByBank(liab, inv, items, tx) : []), [inv, liab, tx, items])
   const s = useMemo(() => {
     if (!inv || !liab || !tx) return undefined
     const invested = inv.reduce((a, i) => a + i.investedAmount, 0)
@@ -67,6 +70,37 @@ export default function Dashboard() {
             <Stat label="Loans outstanding" value={moneyShort(s.owed)} sub={`${moneyShort(s.committed)} a month committed`} />
             <Stat label="This month" value={money(s.credits - s.debits)} sub={`${moneyShort(s.credits)} in · ${moneyShort(s.debits)} out`} tone={s.credits - s.debits >= 0 ? 'ok' : 'bad'} />
           </div>
+
+          {banks.length > 0 && (
+            <section className="panel stack">
+              <h2>Balance to keep · next 30 days</h2>
+              <p className="muted">EMIs, premiums, SIPs, renewals and recurring expenses to be debited from each account. Tap an account for details.</p>
+              <ul className="bank-list">
+                {banks.map((b) => (
+                  <li key={b.bank}>
+                    <details>
+                      <summary>
+                        <span className="row-text">
+                          <span className={b.bank === NOT_SET ? 'row-title tone-warn' : 'row-title'}>{b.bank}</span>
+                          <span className="row-sub">{b.lines.length} payment{b.lines.length === 1 ? '' : 's'}</span>
+                        </span>
+                        <span className="row-value">{money(b.total)}</span>
+                      </summary>
+                      <ul className="bank-lines">
+                        {b.lines.map((o, i) => (
+                          <li key={i}>
+                            <span className="row-text"><span>{o.title}</span><span className="row-sub">{o.detail}</span></span>
+                            <span>{money(o.amount)}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </li>
+                ))}
+              </ul>
+              {banks.some((b) => b.bank === NOT_SET) && <p className="muted">Pick a “Debit from” bank on those entries to place them under the right account.</p>}
+            </section>
+          )}
 
           {s.byType.length > 0 && (
             <section className="panel split">

@@ -146,7 +146,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .tl-item .row-text { flex: 1; }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin: 16px 0; }
-.panel.stack { display: grid; gap: 12px; }
+.panel.stack { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 .panel h2 { font-size: 17px; }
 .split { display: grid; gap: 8px; align-items: center; }
 @media (min-width: 640px) { .split { grid-template-columns: 220px minmax(0, 820px); justify-content: center; } }
@@ -154,6 +154,32 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .legend li { display: grid; grid-template-columns: 12px 1fr auto 42px; gap: 8px; align-items: center; font-size: 14px; }
 .legend i { width: 10px; height: 10px; border-radius: 3px; }
 .legend em { font-style: normal; color: var(--muted); text-align: right; }
+
+/* ---------- balance per bank ---------- */
+.bank-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.bank-list > li { border: 1px solid var(--line); border-radius: var(--radius); }
+.bank-list summary { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 12px; cursor: pointer; list-style: none; }
+.bank-list summary::-webkit-details-marker { display: none; }
+.bank-lines { list-style: none; margin: 0; padding: 0 12px 10px; display: grid; gap: 6px; font-size: 14px; }
+.bank-lines li { display: flex; justify-content: space-between; gap: 12px; border-top: 1px dashed var(--line); padding-top: 6px; }
+
+.chart-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; color: var(--muted); }
+.chart-legend li { display: flex; align-items: center; gap: 6px; }
+.chart-legend i { width: 10px; height: 10px; border-radius: 3px; }
+.chart-tip { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 13px; box-shadow: 0 4px 14px rgb(0 0 0 / .12); min-width: 200px; }
+.chart-tip > div { display: flex; justify-content: space-between; gap: 16px; color: var(--muted); }
+.chart-tip > div span:last-child { color: var(--ink); }
+.chart-tip-total { border-top: 1px solid var(--line); margin-top: 4px; padding-top: 4px; }
+.table-wrap { overflow-x: auto; }
+.bank-table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+.bank-table th, .bank-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; }
+.bank-table th:first-child { text-align: left; }
+.bank-table thead th { color: var(--muted); font-weight: 500; }
+
+/* ---------- checkbox field ---------- */
+.field-check { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; cursor: pointer; }
+.field-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--brand); }
+.field-check small { display: block; color: var(--muted); font-size: 13px; }
 
 /* ---------- history ---------- */
 .hist { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }

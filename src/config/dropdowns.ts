@@ -150,3 +150,49 @@ export const MOTOR_INSURERS = [
   'Universal Sompo',
   'Other',
 ]
+
+/**
+ * Your own bank accounts — the "Debit from" dropdown on every form.
+ * The dashboard adds up what is due from each one, so you know how much balance to keep there.
+ * Replace these with your accounts; a nickname like 'HDFC Salary ••1234' works fine.
+ */
+export const MY_BANK_ACCOUNTS: string[] = [
+  'HDFC Bank',
+  'State Bank of India',
+  'ICICI Bank',
+  'Axis Bank',
+  'Kotak Mahindra Bank',
+  'IDFC FIRST Bank',
+  'Cash',
+]
+
+// ── Cash flow categories ─────────────────────────────────────────────────────
+//  Written as CAPITAL_WORDS; the app shows them as words ("SCHOOL_FEES" → "School Fees").
+//  Short forms listed in ACRONYMS (src/lib/format.ts) stay upper-case, e.g. OTT, DTH, UPI.
+//  Don't rename or remove a category that saved entries already use — they would show the raw key.
+
+/** Cash flow → Credit (money in) → Category */
+export const CREDIT_SOURCES = [
+  'SALARY', 'MF_REDEMPTION', 'FD_MATURITY', 'RD_MATURITY', 'PPF_MATURITY', 'NPS_WITHDRAWAL',
+  'GRATUITY', 'DIVIDEND', 'STOCK_SALE', 'OTHER',
+] as const
+
+/** Cash flow → Debit (money out) → Category */
+export const DEBIT_CATEGORIES = [
+  // Loans, insurance, savings
+  'EMI', 'INSURANCE', 'INVESTMENT',
+  // Home & education
+  'RENT', 'SCHOOL_FEES', 'TUITION_FEES', 'EDUCATION_FEES', 'TRANSPORTATION_FEES',
+  // Bills & subscriptions
+  'ELECTRICITY_BILL', 'GAS_CONNECTION', 'MOBILE_RECHARGE', 'DTH_CONNECTION', 'OTT_SUBSCRIPTION', 'UTILITIES',
+  // Food & shopping
+  'GROCERIES', 'ONLINE_FOOD', 'EATING_OUT', 'ONLINE_PURCHASE', 'SHOPPING',
+  // Health
+  'MEDICINES', 'DOCTORS', 'HEALTH',
+  // Travel, cash & wallets
+  'TRANSPORT', 'CASH_WITHDRAWAL', 'UPI_RECHARGE',
+  'OTHER',
+] as const
+
+/** "Debit from" options: blank (not set) first, then your accounts. */
+export const bankAccountOptions = () => [{ value: '', label: '— Not set —' }, ...toOptions(MY_BANK_ACCOUNTS)]

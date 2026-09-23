@@ -37,7 +37,7 @@ Settings → **Load sample data** fills every screen with examples.
 ```
 src/
   types.ts                 all data shapes in one place
-  config/dropdowns.ts      dropdown lists (fund houses, banks, insurers) — edit and redeploy to change
+  config/dropdowns.ts      dropdown lists (fund houses, banks, insurers, your accounts, cash-flow categories) — edit and redeploy
   lib/firebase.ts          Firebase app, auth, Firestore (offline cache)
   lib/auth.tsx             sign-in state, Google sign-in, log out
   db/db.ts                 per-user Firestore tables, useTable() hook, backup/restore

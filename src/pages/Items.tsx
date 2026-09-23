@@ -4,6 +4,7 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { PageHead } from '@/components/ui'
 import { addMonths, daysUntil, label, money, niceDate, today } from '@/lib/format'
 import type { TrackedItem } from '@/types'
+import { bankAccountOptions } from '@/config/dropdowns'
 
 const fields: Field[] = [
   { key: 'name', label: 'Name', type: 'text', required: true, hint: 'e.g. "Swift – insurance" or "Fridge warranty"' },
@@ -13,6 +14,7 @@ const fields: Field[] = [
   { key: 'remindDaysBefore', label: 'Remind me (days before)', type: 'number', required: true },
   { key: 'reference', label: 'Policy / vehicle / serial no.', type: 'text' },
   { key: 'cost', label: 'Renewal cost (₹)', type: 'number' },
+  { key: 'debitBank', label: 'Debit from (your bank)', type: 'select', options: bankAccountOptions(), hint: 'Account the renewal is paid from.' },
   { key: 'notes', label: 'Notes', type: 'textarea' },
 ]
 

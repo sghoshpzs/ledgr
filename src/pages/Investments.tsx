@@ -4,7 +4,7 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, niceDate, pct } from '@/lib/format'
 import type { Investment } from '@/types'
-import { FUND_HOUSES, PPF_BANKS, toOptions } from '@/config/dropdowns'
+import { FUND_HOUSES, PPF_BANKS, bankAccountOptions, toOptions } from '@/config/dropdowns'
 
 const LONG = ['MUTUAL_FUND', 'PPF', 'NPS', 'GRATUITY', 'STOCK']
 const SHORT = ['FD', 'RD', 'STOCK']
@@ -20,6 +20,7 @@ const fields: Field[] = [
   { key: 'investedAmount', label: 'Amount invested (₹)', type: 'number', required: true },
   { key: 'currentValue', label: 'Current value (₹)', type: 'number', required: true, hint: 'Update this whenever you check your statement.' },
   { key: 'startDate', label: 'Start date', type: 'date', required: true },
+  { key: 'debitBank', label: 'Debit from (your bank)', type: 'select', options: bankAccountOptions(), hint: 'Account the contributions are paid from.' },
   { key: 'monthlyContribution', label: 'Monthly contribution (₹)', type: 'number', show: (d) => ['RD', 'NPS', 'MUTUAL_FUND'].includes(d.type) },
   { key: 'interestRate', label: 'Interest rate (% a year)', type: 'number', show: (d) => ['FD', 'RD', 'PPF'].includes(d.type) },
   { key: 'maturityDate', label: 'Maturity date', type: 'date', show: (d) => ['FD', 'RD', 'PPF', 'NPS'].includes(d.type) },

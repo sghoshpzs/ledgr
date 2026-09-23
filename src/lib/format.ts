@@ -37,7 +37,7 @@ export function niceDate(iso?: string) {
   return new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-const ACRONYMS = new Set(['EMI', 'PPF', 'NPS', 'FD', 'RD', 'PUC', 'MF'])
+const ACRONYMS = new Set(['EMI', 'PPF', 'NPS', 'FD', 'RD', 'PUC', 'MF', 'OTT', 'DTH', 'UPI'])
 /** HOME_LOAN_EMI -> "Home Loan EMI" */
 export const label = (k: string) =>
   k.split('_').map((w) => (ACRONYMS.has(w) ? w : w[0] + w.slice(1).toLowerCase())).join(' ')

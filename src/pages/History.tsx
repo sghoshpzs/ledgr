@@ -21,6 +21,7 @@ const keyLabel = (k: string) => { const w = k.replace(/([A-Z])/g, ' $1').toLower
 function show(v: unknown) {
   if (v === undefined || v === null || v === '') return '—'
   if (typeof v === 'number') return v.toLocaleString('en-IN')
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No'
   const s = String(v)
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return niceDate(s)
   if (/^[A-Z][A-Z_]+$/.test(s)) return label(s)

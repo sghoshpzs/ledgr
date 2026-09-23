@@ -15,6 +15,7 @@ const fields: Field[] = [
   { key: 'bank', label: 'Bank', type: 'select', required: true, options: toOptions(LOAN_BANKS), show: (d) => d.type.endsWith('_EMI') },
   { key: 'insurer', label: 'Insurance provider', type: 'select', required: true,
     options: (d) => toOptions(d.type === 'HEALTH_INSURANCE' ? HEALTH_INSURERS : MOTOR_INSURERS), show: (d) => d.type.endsWith('_INSURANCE') },
+  { key: 'policyNumber', label: 'Policy number', type: 'text', show: (d) => d.type.endsWith('_INSURANCE') },
   { key: 'amount', label: 'Amount per payment (₹)', type: 'number', required: true },
   { key: 'frequency', label: 'How often', type: 'select', required: true,
     options: [{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'yearly', label: 'Yearly' }] },

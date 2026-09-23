@@ -15,8 +15,12 @@ const ACTION: Record<HistoryAction, { text: string; tone: Tone }> = {
 }
 const HIDDEN = new Set(['liabilityId', 'investmentId']) // internal links, not meaningful to read
 
+const KEY_LABEL: Record<string, string> = {
+  pran: 'PRAN', fdNumber: 'FD number', rdNumber: 'RD number', ppfAccountNumber: 'PPF account number',
+  debitBank: 'Debit from',
+}
 /** investedAmount -> "Invested amount" */
-const keyLabel = (k: string) => { const w = k.replace(/([A-Z])/g, ' $1').toLowerCase(); return w[0].toUpperCase() + w.slice(1) }
+const keyLabel = (k: string) => { if (KEY_LABEL[k]) return KEY_LABEL[k]; const w = k.replace(/([A-Z])/g, ' $1').toLowerCase(); return w[0].toUpperCase() + w.slice(1) }
 
 function show(v: unknown) {
   if (v === undefined || v === null || v === '') return '—'

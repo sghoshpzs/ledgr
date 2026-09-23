@@ -12,7 +12,8 @@ const fields: Field[] = [
     options: [{ value: 'VEHICLE_INSURANCE', label: 'Vehicle insurance' }, { value: 'VEHICLE_PUC', label: 'Vehicle pollution (PUC)' }, { value: 'WARRANTY', label: 'Warranty' }] },
   { key: 'expiryDate', label: 'Expires on', type: 'date', required: true },
   { key: 'remindDaysBefore', label: 'Remind me (days before)', type: 'number', required: true },
-  { key: 'reference', label: 'Policy / vehicle / serial no.', type: 'text' },
+  { key: 'policyNumber', label: 'Policy number', type: 'text', show: (d) => d.type === 'VEHICLE_INSURANCE' },
+  { key: 'reference', label: 'Vehicle / serial no.', type: 'text' },
   { key: 'cost', label: 'Renewal cost (₹)', type: 'number' },
   { key: 'debitBank', label: 'Debit from (your bank)', type: 'select', options: bankAccountOptions(), hint: 'Account the renewal is paid from.' },
   { key: 'notes', label: 'Notes', type: 'textarea' },
@@ -36,7 +37,7 @@ export default function Items() {
           const d = daysUntil(t.expiryDate)
           return {
             title: t.name,
-            sub: `${label(t.type)} · ${t.expiryDate ? niceDate(t.expiryDate) : ''}${t.reference ? ' · ' + t.reference : ''}`,
+            sub: `${label(t.type)} · ${t.expiryDate ? niceDate(t.expiryDate) : ''}${t.policyNumber ? ' · Policy ' + t.policyNumber : ''}${t.reference ? ' · ' + t.reference : ''}`,
             value: t.cost ? money(t.cost) : undefined,
             badge: d < 0 ? { text: `expired ${-d}d ago`, tone: 'bad' } : d <= t.remindDaysBefore ? { text: `${d}d left`, tone: 'warn' } : { text: `${d}d left`, tone: 'ok' },
           }

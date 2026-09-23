@@ -4,7 +4,7 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, niceDate, pct } from '@/lib/format'
 import type { Investment } from '@/types'
-import { FUND_HOUSES, PPF_BANKS, bankAccountOptions, toOptions } from '@/config/dropdowns'
+import { BROKERS, FUND_HOUSES, PPF_BANKS, bankAccountOptions, toOptions } from '@/config/dropdowns'
 
 const LONG = ['MUTUAL_FUND', 'PPF', 'NPS', 'GRATUITY', 'STOCK']
 const SHORT = ['FD', 'RD', 'STOCK']
@@ -17,6 +17,13 @@ const fields: Field[] = [
   { key: 'type', label: 'Type', type: 'select', required: true, options: (d) => opts(d.horizon === 'short' ? SHORT : LONG) },
   { key: 'fundHouse', label: 'Fund house', type: 'select', required: true, options: toOptions(FUND_HOUSES), show: (d) => d.type === 'MUTUAL_FUND' },
   { key: 'bank', label: 'Bank', type: 'select', required: true, options: toOptions(PPF_BANKS), show: (d) => d.type === 'PPF' },
+  { key: 'broker', label: 'Broker', type: 'select', required: true, options: toOptions(BROKERS), show: (d) => d.type === 'STOCK' },
+  { key: 'folioNumber', label: 'Folio number', type: 'text', show: (d) => d.type === 'MUTUAL_FUND' },
+  { key: 'ppfAccountNumber', label: 'PPF account number', type: 'text', show: (d) => d.type === 'PPF' },
+  { key: 'pran', label: 'PRAN', type: 'text', hint: 'Permanent Retirement Account Number (12 digits).', show: (d) => d.type === 'NPS' },
+  { key: 'dematAccountNumber', label: 'Demat account number', type: 'text', hint: 'DP ID + Client ID (16 characters).', show: (d) => d.type === 'STOCK' },
+  { key: 'fdNumber', label: 'FD number', type: 'text', show: (d) => d.type === 'FD' },
+  { key: 'rdNumber', label: 'RD number', type: 'text', show: (d) => d.type === 'RD' },
   { key: 'investedAmount', label: 'Amount invested (₹)', type: 'number', required: true },
   { key: 'currentValue', label: 'Current value (₹)', type: 'number', required: true, hint: 'Update this whenever you check your statement.' },
   { key: 'startDate', label: 'Start date', type: 'date', required: true },
@@ -54,7 +61,7 @@ export default function Investments() {
         empty={tab === 'long' ? 'No long-term investments yet. Add a mutual fund, PPF, NPS, gratuity or stock.' : 'No short-term investments yet. Add an FD, RD or stock.'}
         view={(r) => ({
           title: r.name,
-          sub: [label(r.type), r.fundHouse ?? r.bank, r.maturityDate && `matures ${niceDate(r.maturityDate)}`].filter(Boolean).join(' · '),
+          sub: [label(r.type), r.fundHouse ?? r.bank ?? r.broker, r.maturityDate && `matures ${niceDate(r.maturityDate)}`].filter(Boolean).join(' · '),
           value: money(r.currentValue),
           valueSub: `invested ${money(r.investedAmount)}`,
         })}

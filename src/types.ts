@@ -18,6 +18,13 @@ export interface Investment {
   debitBank?: string // your account the contribution is paid from
   fundHouse?: string // MUTUAL_FUND — list in config/dropdowns.ts
   bank?: string // PPF — list in config/dropdowns.ts
+  broker?: string // STOCK — list in config/dropdowns.ts
+  folioNumber?: string // MUTUAL_FUND
+  ppfAccountNumber?: string // PPF
+  pran?: string // NPS — Permanent Retirement Account Number
+  dematAccountNumber?: string // STOCK — DP ID + client ID
+  fdNumber?: string // FD
+  rdNumber?: string // RD
   notes?: string
 }
 
@@ -40,6 +47,7 @@ export interface Liability {
   debitBank?: string // your account the payment is debited from
   bank?: string // *_EMI — list in config/dropdowns.ts
   insurer?: string // *_INSURANCE — list in config/dropdowns.ts
+  policyNumber?: string // *_INSURANCE
   outstanding?: number
   endDate?: string
   notes?: string
@@ -57,7 +65,9 @@ export interface Transaction {
   amount: number
   date: string
   note?: string
-  recurring?: boolean // fixed expense that repeats every month
+  recurring?: boolean // fixed expense that repeats every month (see lib/recurring.ts)
+  debitDay?: number // recurring: day of the month it is debited (1–31)
+  endMonth?: string // recurring: last month it applies (yyyy-mm); open-ended when absent
   debitBank?: string // your account it is paid from — config/dropdowns.ts MY_BANK_ACCOUNTS
   liabilityId?: string // optional link when a debit settles a liability
   investmentId?: string // optional link when a credit/debit relates to an investment
@@ -70,7 +80,8 @@ export interface TrackedItem {
   id?: string
   name: string // e.g. "Swift – insurance", "Fridge warranty"
   type: ItemType
-  reference?: string // policy no. / vehicle no. / serial no.
+  policyNumber?: string // VEHICLE_INSURANCE
+  reference?: string // vehicle no. / serial no.
   expiryDate: string
   remindDaysBefore: number
   cost?: number

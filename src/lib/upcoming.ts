@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import { useTable } from '@/db/db'
-import { daysUntil, label } from '@/lib/format'
-import type { Investment, Liability, TrackedItem } from '@/types'
+import { daysUntil, label, today, toISO } from '@/lib/format'
+import { recurringBetween } from '@/lib/recurring'
+import type { Investment, Liability, TrackedItem, Transaction } from '@/types'
 
 export interface Upcoming {
   id: string
@@ -10,7 +11,7 @@ export interface Upcoming {
   title: string
   detail: string
   amount?: number
-  kind: 'liability' | 'maturity' | 'renewal'
+  kind: 'liability' | 'maturity' | 'renewal' | 'recurring'
   to: string // route to open
 }
 
@@ -19,10 +20,21 @@ export function buildUpcoming(
   liabilities: Liability[],
   investments: Investment[],
   items: TrackedItem[],
+  transactions: Transaction[] = [],
   liabilityWindow = 30,
   maturityWindow = 60,
+  recurringWindow = 7,
 ): Upcoming[] {
   const out: Upcoming[] = []
+
+  const t = today()
+  const until = new Date(t + 'T00:00:00')
+  until.setDate(until.getDate() + recurringWindow)
+  for (const r of recurringBetween(transactions, t, toISO(until)))
+    out.push({
+      id: `r-${r.id}-${r.date}`, date: r.date, days: daysUntil(r.date), title: r.note || label(r.category),
+      detail: `${label(r.category)} · recurring${r.debitBank ? ' · ' + r.debitBank : ''}`, amount: r.amount, kind: 'recurring', to: '/credits',
+    })
 
   for (const l of liabilities) {
     const days = daysUntil(l.nextDueDate)
@@ -56,5 +68,6 @@ export function useUpcoming() {
   const l = useTable('liabilities')
   const i = useTable('investments')
   const t = useTable('items')
-  return useMemo(() => (l && i && t ? buildUpcoming(l, i, t) : []), [l, i, t])
+  const tx = useTable('transactions')
+  return useMemo(() => (l && i && t && tx ? buildUpcoming(l, i, t, tx) : []), [l, i, t, tx])
 }

@@ -5,6 +5,7 @@ import { useTable } from '@/db/db'
 import { Badge, PageHead, Stat } from '@/components/ui'
 import { useUpcoming } from '@/lib/upcoming'
 import { balanceByBank, NOT_SET } from '@/lib/banks'
+import { txInMonth } from '@/lib/recurring'
 import { CHART_COLORS } from '@/lib/palette'
 import { label, money, moneyShort, monthKey, monthlyEquivalent, niceDate, pct, today } from '@/lib/format'
 
@@ -21,7 +22,7 @@ export default function Dashboard() {
     const current = inv.reduce((a, i) => a + i.currentValue, 0)
     const byType = Object.entries(inv.reduce<Record<string, number>>((m, i) => ({ ...m, [i.type]: (m[i.type] ?? 0) + i.currentValue }), {}))
       .map(([k, v]) => ({ name: label(k), value: v })).sort((a, b) => b.value - a.value)
-    const m = tx.filter((t) => monthKey(t.date) === monthKey(today()))
+    const m = txInMonth(tx, monthKey(today()))
     return {
       invested, current, byType,
       owed: liab.reduce((a, l) => a + (l.outstanding ?? 0), 0),

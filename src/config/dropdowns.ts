@@ -2,7 +2,7 @@
 //  Dropdown lists used in the Add / Edit forms.
 //
 //  To change a list: add, remove or rename entries below, then rebuild/deploy.
-//  • Order here = order in the dropdown (the first entry is the default).
+//  • Dropdowns are shown A–Z automatically, so the order here doesn't matter.
 //  • Keep "Other" as the last entry so anything not listed can still be recorded.
 //  • Renaming an entry does NOT change records already saved with the old name;
 //    they keep showing their saved value (edit the record to pick the new one).
@@ -68,6 +68,26 @@ export const PPF_BANKS = [
   'HDFC Bank',
   'Axis Bank',
   'Kotak Mahindra Bank',
+  'Other',
+]
+
+/** Investments → Type "Stock" → Broker */
+export const BROKERS = [
+  'Zerodha',
+  'Groww',
+  'Upstox',
+  'Angel One',
+  'ICICI Direct',
+  'HDFC Securities',
+  'Kotak Securities',
+  'Motilal Oswal',
+  'Sharekhan',
+  'SBI Securities',
+  'Axis Direct',
+  '5paisa',
+  'Dhan',
+  'Paytm Money',
+  'IIFL Securities',
   'Other',
 ]
 

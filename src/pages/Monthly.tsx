@@ -4,6 +4,7 @@ import { useTable } from '@/db/db'
 import { PageHead, Stat } from '@/components/ui'
 import { BankChart } from '@/components/BankChart'
 import { monthNeedByBank } from '@/lib/banks'
+import { txInMonth } from '@/lib/recurring'
 import { CHART_COLORS } from '@/lib/palette'
 import { label, money, monthlyEquivalent, monthKey, today } from '@/lib/format'
 
@@ -14,7 +15,7 @@ export default function Monthly() {
   const invs = useTable('investments')
   const items = useTable('items')
   const data = useMemo(() => allTx && liabs && {
-    tx: allTx.filter((t) => monthKey(t.date) === month),
+    tx: txInMonth(allTx, month), // one-time entries of the month + recurring debits active in it
     committed: liabs.reduce((s, l) => s + monthlyEquivalent(l.amount, l.frequency), 0),
   }, [allTx, liabs, month])
 

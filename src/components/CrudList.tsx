@@ -10,7 +10,7 @@ type Draft = Record<string, string>
 export interface Field {
   key: string
   label: string
-  type: 'text' | 'number' | 'date' | 'select' | 'textarea' | 'checkbox'
+  type: 'text' | 'number' | 'date' | 'month' | 'select' | 'textarea' | 'checkbox'
   options?: Option[] | ((draft: Draft) => Option[])
   required?: boolean
   hint?: string
@@ -36,6 +36,8 @@ interface Props<T extends { id?: string }> {
   noun: string // "investment", "liability" … used in button and modal titles
   empty: string
   actions?: (row: T) => ReactNode
+  /** Last chance to adjust a row before it is saved (e.g. fill a hidden field). `before` is the row being edited. */
+  prepare?: (row: Record<string, unknown>, before: T | null) => Record<string, unknown>
 }
 
 const baseOptions = (f: Field, d: Draft): Option[] =>
@@ -46,12 +48,17 @@ const baseOptions = (f: Field, d: Draft): Option[] =>
  * renamed in config/dropdowns.ts) is kept as an extra option so editing a row never silently changes it.
  */
 function optionsOf(f: Field, d: Draft, original: Draft | null): Option[] {
-  const opts = baseOptions(f, d)
+  const opts = [...baseOptions(f, d)]
   const saved = original?.[f.key]
   if (original && saved && !baseOptions(f, original).some((o) => o.value === saved) && !opts.some((o) => o.value === saved))
-    return [...opts, { value: saved, label: saved }]
-  return opts
+    opts.push({ value: saved, label: saved })
+  return sortOptions(opts)
 }
+
+/** Every dropdown is A–Z (numbers in numeric order: 1st, 2nd … 10th), with "not set" first and "Other" last. */
+const rank = (o: Option) => (o.value === '' ? 0 : /^other$/i.test(o.value) ? 2 : 1)
+const sortOptions = (opts: Option[]) =>
+  opts.sort((a, b) => rank(a) - rank(b) || a.label.localeCompare(b.label, 'en', { numeric: true, sensitivity: 'base' }))
 
 /** Keep dependent selects valid (e.g. changing Horizon changes which Types are offered). */
 function normalize(fields: Field[], d: Draft, original: Draft | null) {
@@ -69,7 +76,7 @@ function normalize(fields: Field[], d: Draft, original: Draft | null) {
  * is just a field list and a row renderer on top of this — copy a page to add a new module.
  */
 export function CrudList<T extends { id?: string }>({
-  table, rows, fields, defaults, view, noun, empty, actions,
+  table, rows, fields, defaults, view, noun, empty, actions, prepare,
 }: Props<T>) {
   const [editing, setEditing] = useState<T | 'new' | null>(null)
   const [draft, setDraft] = useState<Draft>({})
@@ -95,13 +102,14 @@ export function CrudList<T extends { id?: string }>({
 
   const save = (e: FormEvent) => {
     e.preventDefault()
-    const out: Record<string, unknown> = editing === 'new' || !editing ? {} : { ...editing }
+    let out: Record<string, unknown> = editing === 'new' || !editing ? {} : { ...editing }
     for (const f of fields) {
       if (f.show && !f.show(draft)) { delete out[f.key]; continue }
       const raw = (draft[f.key] ?? '').trim()
       if (raw === '') delete out[f.key]
       else out[f.key] = f.type === 'number' ? Number(raw) : f.type === 'checkbox' ? true : raw
     }
+    if (prepare) out = prepare(out, editing === 'new' ? null : editing)
     if (editing === 'new') table.add(out as T)
     else if (editing) table.put(out as T, editing)
     setEditing(null)

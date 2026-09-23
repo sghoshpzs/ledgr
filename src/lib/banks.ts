@@ -1,4 +1,5 @@
 import { addMonths, label, niceDate, toISO, today } from '@/lib/format'
+import { isRecurring, recurringBetween, txInMonth } from '@/lib/recurring'
 import type { Investment, Liability, TrackedItem, Transaction } from '@/types'
 
 export const NOT_SET = 'Bank not set'
@@ -26,21 +27,11 @@ function group(outflows: { bank?: string; o: Outflow }[]): BankNeed[] {
     .sort((a, b) => (a.bank === NOT_SET ? 1 : b.bank === NOT_SET ? -1 : b.total - a.total))
 }
 
-/**
- * Recurring debits repeat monthly: take the latest entry (up to `until`) of each distinct expense.
- * EMIs logged via "Mark paid" are skipped — they are already counted from Liabilities.
- */
-function recurringDebits(transactions: Transaction[], until: string) {
-  const latest = new Map<string, Transaction>()
-  for (const tx of transactions) {
-    if (tx.kind !== 'debit' || !tx.recurring || tx.liabilityId || tx.date > until) continue
-    const key = `${tx.category}|${(tx.note ?? '').trim().toLowerCase()}|${tx.debitBank ?? ''}`
-    const prev = latest.get(key)
-    if (!prev || tx.date > prev.date) latest.set(key, tx)
-  }
-  return [...latest.values()].map((tx) => ({
+/** Dated recurring-debit occurrences as outflows. EMIs logged via "Mark paid" are skipped — Liabilities already counts them. */
+function recurringOutflows(occurrences: Transaction[]) {
+  return occurrences.filter((tx) => !tx.liabilityId).map((tx) => ({
     bank: tx.debitBank,
-    o: { title: tx.note || label(tx.category), detail: `${label(tx.category)} · recurring monthly`, amount: tx.amount, kind: 'recurring' as const },
+    o: { title: tx.note || label(tx.category), detail: `${label(tx.category)} · debited ${niceDate(tx.date)}`, amount: tx.amount, kind: 'recurring' as const },
   }))
 }
 
@@ -71,7 +62,7 @@ export function balanceByBank(
     if (!it.cost || it.expiryDate > until) continue
     out.push({ bank: it.debitBank, o: { title: it.name, detail: `${label(it.type)} · renews ${niceDate(it.expiryDate)}`, amount: it.cost, kind: 'renewal' } })
   }
-  return group([...out, ...recurringDebits(transactions, t)])
+  return group([...out, ...recurringOutflows(recurringBetween(transactions, t, until))])
 }
 
 const monthIndex = (iso: string) => Number(iso.slice(0, 4)) * 12 + Number(iso.slice(5, 7)) - 1
@@ -104,5 +95,5 @@ export function monthNeedByBank(
     if (!it.cost || it.expiryDate < start || it.expiryDate > end) continue
     out.push({ bank: it.debitBank, o: { title: it.name, detail: `${label(it.type)} · renews ${niceDate(it.expiryDate)}`, amount: it.cost, kind: 'renewal' } })
   }
-  return group([...out, ...recurringDebits(transactions, end)])
+  return group([...out, ...recurringOutflows(txInMonth(transactions, month).filter(isRecurring))])
 }

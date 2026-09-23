@@ -6,7 +6,7 @@ Offline-first personal finance + renewal tracker. React + TypeScript + Vite, Goo
 
 1. Firebase console → your project → **Build → Authentication → Get started → Sign-in method → Google → Enable**.
 2. **Build → Firestore Database → Create database** in *production mode* (pick a region near you, e.g. `asia-south1`).
-3. **Project settings → General → Your apps → Add app → Web**. Copy the config values into `.env`.
+3. **Project settings → General → Your apps → Add app → Web**. Copy `.env.example` to `.env.local` and fill in the config values. For CI, add the same four names as GitHub Actions secrets.
 4. `npx firebase deploy --only firestore:rules` — publishes `firestore.rules` (each user can only access `users/{their uid}/…`).
 
 ## Run

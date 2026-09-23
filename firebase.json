@@ -3,6 +3,7 @@
     "rules": "firestore.rules"
   },
   "hosting": {
+    "site": "myledgr",
     "public": "dist",
     "ignore": [
       "firebase.json",

@@ -10,8 +10,8 @@ export async function seedDemo() {
   const thisMonth = t.slice(0, 7)
 
   const investments: Investment[] = [
-    { name: 'Index fund SIP', type: 'MUTUAL_FUND', horizon: 'long', investedAmount: 300000, currentValue: 362000, startDate: mo(-30), monthlyContribution: 10000 },
-    { name: 'PPF – SBI', type: 'PPF', horizon: 'long', investedAmount: 450000, currentValue: 520000, startDate: mo(-48), interestRate: 7.1, maturityDate: mo(132) },
+    { name: 'Index fund SIP', type: 'MUTUAL_FUND', fundHouse: 'UTI Mutual Fund', horizon: 'long', investedAmount: 300000, currentValue: 362000, startDate: mo(-30), monthlyContribution: 10000 },
+    { name: 'PPF – SBI', type: 'PPF', bank: 'State Bank of India', horizon: 'long', investedAmount: 450000, currentValue: 520000, startDate: mo(-48), interestRate: 7.1, maturityDate: mo(132) },
     { name: 'NPS Tier I', type: 'NPS', horizon: 'long', investedAmount: 180000, currentValue: 214000, startDate: mo(-36), monthlyContribution: 5000 },
     { name: 'Gratuity (employer)', type: 'GRATUITY', horizon: 'long', investedAmount: 0, currentValue: 240000, startDate: mo(-60) },
     { name: 'Direct equity', type: 'STOCK', horizon: 'long', investedAmount: 200000, currentValue: 231000, startDate: mo(-20) },
@@ -19,11 +19,11 @@ export async function seedDemo() {
     { name: 'RD – Post office', type: 'RD', horizon: 'short', investedAmount: 60000, currentValue: 62400, startDate: mo(-10), interestRate: 6.7, monthlyContribution: 6000, maturityDate: day(45) },
   ]
   const liabilities: Liability[] = [
-    { name: 'Home loan – HDFC', type: 'HOME_LOAN_EMI', amount: 38500, frequency: 'monthly', nextDueDate: day(4), outstanding: 3200000, endDate: mo(180) },
-    { name: 'Car loan – ICICI', type: 'CAR_LOAN_EMI', amount: 14200, frequency: 'monthly', nextDueDate: day(9), outstanding: 380000, endDate: mo(30) },
-    { name: 'Phone EMI – credit card', type: 'CREDIT_CARD_EMI', amount: 4100, frequency: 'monthly', nextDueDate: day(2), outstanding: 24600 },
-    { name: 'Health insurance', type: 'HEALTH_INSURANCE', amount: 21500, frequency: 'yearly', nextDueDate: day(26) },
-    { name: 'Car insurance', type: 'CAR_INSURANCE', amount: 12800, frequency: 'yearly', nextDueDate: mo(7) },
+    { name: 'Home loan – HDFC', type: 'HOME_LOAN_EMI', bank: 'HDFC Bank', amount: 38500, frequency: 'monthly', nextDueDate: day(4), outstanding: 3200000, endDate: mo(180) },
+    { name: 'Car loan – ICICI', type: 'CAR_LOAN_EMI', bank: 'ICICI Bank', amount: 14200, frequency: 'monthly', nextDueDate: day(9), outstanding: 380000, endDate: mo(30) },
+    { name: 'Phone EMI – credit card', type: 'CREDIT_CARD_EMI', bank: 'HDFC Bank', amount: 4100, frequency: 'monthly', nextDueDate: day(2), outstanding: 24600 },
+    { name: 'Health insurance', type: 'HEALTH_INSURANCE', insurer: 'Star Health', amount: 21500, frequency: 'yearly', nextDueDate: day(26) },
+    { name: 'Car insurance', type: 'CAR_INSURANCE', insurer: 'ICICI Lombard', amount: 12800, frequency: 'yearly', nextDueDate: mo(7) },
   ]
   const transactions: Transaction[] = [
     { kind: 'credit', category: 'SALARY', amount: 145000, date: `${thisMonth}-01`, note: 'Monthly salary' },

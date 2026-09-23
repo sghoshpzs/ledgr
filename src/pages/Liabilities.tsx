@@ -4,6 +4,7 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { PageHead, Stat } from '@/components/ui'
 import { addMonths, daysUntil, label, money, monthlyEquivalent, niceDate, today } from '@/lib/format'
 import type { Liability } from '@/types'
+import { HEALTH_INSURERS, LOAN_BANKS, MOTOR_INSURERS, toOptions } from '@/config/dropdowns'
 
 const TYPES = ['HOME_LOAN_EMI', 'CAR_LOAN_EMI', 'CREDIT_CARD_EMI', 'HEALTH_INSURANCE', 'CAR_INSURANCE']
 const STEP = { monthly: 1, quarterly: 3, yearly: 12 } as const
@@ -11,6 +12,9 @@ const STEP = { monthly: 1, quarterly: 3, yearly: 12 } as const
 const fields: Field[] = [
   { key: 'name', label: 'Name', type: 'text', required: true },
   { key: 'type', label: 'Type', type: 'select', required: true, options: TYPES.map((v) => ({ value: v, label: label(v) })) },
+  { key: 'bank', label: 'Bank', type: 'select', required: true, options: toOptions(LOAN_BANKS), show: (d) => d.type.endsWith('_EMI') },
+  { key: 'insurer', label: 'Insurance provider', type: 'select', required: true,
+    options: (d) => toOptions(d.type === 'HEALTH_INSURANCE' ? HEALTH_INSURERS : MOTOR_INSURERS), show: (d) => d.type.endsWith('_INSURANCE') },
   { key: 'amount', label: 'Amount per payment (₹)', type: 'number', required: true },
   { key: 'frequency', label: 'How often', type: 'select', required: true,
     options: [{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'yearly', label: 'Yearly' }] },
@@ -28,7 +32,7 @@ async function markPaid(l: Liability) {
     category: l.type.includes('INSURANCE') ? 'INSURANCE' : 'EMI',
     amount: l.amount, date: today(), note: l.name, liabilityId: l.id,
   })
-  db.liabilities.updateIn(b, l.id!, { nextDueDate: addMonths(l.nextDueDate, STEP[l.frequency]) })
+  db.liabilities.updateIn(b, l, { nextDueDate: addMonths(l.nextDueDate, STEP[l.frequency]) })
   // TODO: for loans, reduce `outstanding` using your lender's amortisation schedule.
   await b.commit()
 }
@@ -57,7 +61,7 @@ export default function Liabilities() {
           const d = daysUntil(r.nextDueDate)
           return {
             title: r.name,
-            sub: `${label(r.type)} · due ${niceDate(r.nextDueDate)}`,
+            sub: [label(r.type), r.bank ?? r.insurer, `due ${niceDate(r.nextDueDate)}`].filter(Boolean).join(' · '),
             value: money(r.amount),
             badge: d < 0 ? { text: `${-d}d overdue`, tone: 'bad' } : d <= 7 ? { text: d === 0 ? 'due today' : `in ${d}d`, tone: 'warn' } : { text: r.frequency, tone: 'info' },
           }

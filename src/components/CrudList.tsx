@@ -2,6 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react'
 import type { Table } from '@/db/db'
 import { Icon } from '@/components/Icon'
 import { Badge, type Tone } from '@/components/ui'
+import { RecordHistory } from '@/pages/History'
 
 export interface Option { value: string; label: string }
 type Draft = Record<string, string>
@@ -37,8 +38,31 @@ interface Props<T extends { id?: string }> {
   actions?: (row: T) => ReactNode
 }
 
-const optionsOf = (f: Field, d: Draft): Option[] =>
+const baseOptions = (f: Field, d: Draft): Option[] =>
   typeof f.options === 'function' ? f.options(d) : f.options ?? []
+
+/**
+ * Options for a select. A saved value that is no longer in the configured list (e.g. a fund house
+ * renamed in config/dropdowns.ts) is kept as an extra option so editing a row never silently changes it.
+ */
+function optionsOf(f: Field, d: Draft, original: Draft | null): Option[] {
+  const opts = baseOptions(f, d)
+  const saved = original?.[f.key]
+  if (original && saved && !baseOptions(f, original).some((o) => o.value === saved) && !opts.some((o) => o.value === saved))
+    return [...opts, { value: saved, label: saved }]
+  return opts
+}
+
+/** Keep dependent selects valid (e.g. changing Horizon changes which Types are offered). */
+function normalize(fields: Field[], d: Draft, original: Draft | null) {
+  const next = { ...d }
+  for (const f of fields) {
+    if (f.type !== 'select') continue
+    const opts = optionsOf(f, next, original)
+    if (opts.length && !opts.some((o) => o.value === next[f.key])) next[f.key] = opts[0].value
+  }
+  return next
+}
 
 /**
  * One generic list + add/edit sheet. Every module (investments, liabilities, items, transactions)
@@ -49,32 +73,27 @@ export function CrudList<T extends { id?: string }>({
 }: Props<T>) {
   const [editing, setEditing] = useState<T | 'new' | null>(null)
   const [draft, setDraft] = useState<Draft>({})
+  const [original, setOriginal] = useState<Draft | null>(null) // saved values of the row being edited
 
   const open = (row: T | 'new') => {
-    if (row === 'new') setDraft({ ...defaults })
-    else {
+    if (row === 'new') {
+      setOriginal(null)
+      setDraft(normalize(fields, { ...defaults }, null))
+    } else {
       const d: Draft = {}
       for (const f of fields) {
         const v = (row as Record<string, unknown>)[f.key]
         d[f.key] = v === undefined || v === null ? '' : String(v)
       }
-      setDraft(d)
+      setOriginal(d)
+      setDraft(normalize(fields, d, d))
     }
     setEditing(row)
   }
 
-  const setField = (key: string, value: string) => {
-    const next = { ...draft, [key]: value }
-    // keep dependent selects valid (e.g. changing Horizon changes which Types are offered)
-    for (const f of fields) {
-      if (f.type !== 'select') continue
-      const opts = optionsOf(f, next)
-      if (opts.length && !opts.some((o) => o.value === next[f.key])) next[f.key] = opts[0].value
-    }
-    setDraft(next)
-  }
+  const setField = (key: string, value: string) => setDraft(normalize(fields, { ...draft, [key]: value }, original))
 
-  const save = async (e: FormEvent) => {
+  const save = (e: FormEvent) => {
     e.preventDefault()
     const out: Record<string, unknown> = editing === 'new' || !editing ? {} : { ...editing }
     for (const f of fields) {
@@ -83,13 +102,16 @@ export function CrudList<T extends { id?: string }>({
       if (raw === '') delete out[f.key]
       else out[f.key] = f.type === 'number' ? Number(raw) : raw
     }
-    if (editing === 'new') await table.add(out as never)
-    else await table.put(out as never)
+    if (editing === 'new') table.add(out as T)
+    else if (editing) table.put(out as T, editing)
     setEditing(null)
   }
 
-  const remove = async (row: T) => {
-    if (row.id !== undefined && confirm(`Delete this ${noun}?`)) await table.delete(row.id)
+  /** Returns true when the row was deleted. */
+  const remove = (row: T) => {
+    if (row.id === undefined || !confirm(`Delete this ${noun}? You can restore it later from History.`)) return false
+    table.delete(row)
+    return true
   }
 
   return (
@@ -135,7 +157,7 @@ export function CrudList<T extends { id?: string }>({
                   <span>{f.label}</span>
                   {f.type === 'select' ? (
                     <select value={draft[f.key] ?? ''} onChange={(e) => setField(f.key, e.target.value)} required={f.required}>
-                      {optionsOf(f, draft).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+                      {optionsOf(f, draft, original).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   ) : f.type === 'textarea' ? (
                     <textarea rows={2} value={draft[f.key] ?? ''} onChange={(e) => setField(f.key, e.target.value)} />
@@ -150,10 +172,11 @@ export function CrudList<T extends { id?: string }>({
                   {f.hint && <small>{f.hint}</small>}
                 </label>
               ))}
+              {editing !== 'new' && editing.id && <RecordHistory rowId={editing.id} />}
             </div>
             <div className="sheet-foot">
               {editing !== 'new' && (
-                <button type="button" className="btn btn-danger" onClick={async () => { await remove(editing as T); setEditing(null) }}>
+                <button type="button" className="btn btn-danger" onClick={() => { if (remove(editing as T)) setEditing(null) }}>
                   Delete
                 </button>
               )}

@@ -40,7 +40,7 @@ export default function Items() {
           }
         }}
         actions={(t) => t.type === 'WARRANTY' ? null : (
-          <button className="btn btn-small" onClick={() => db.items.update(t.id!, { expiryDate: addMonths(t.expiryDate < today() ? today() : t.expiryDate, 12) })}>
+          <button className="btn btn-small" onClick={() => db.items.update(t, { expiryDate: addMonths(t.expiryDate < today() ? today() : t.expiryDate, 12) })}>
             Renewed +1 year
           </button>
         )}

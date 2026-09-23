@@ -4,6 +4,7 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, niceDate, pct } from '@/lib/format'
 import type { Investment } from '@/types'
+import { FUND_HOUSES, PPF_BANKS, toOptions } from '@/config/dropdowns'
 
 const LONG = ['MUTUAL_FUND', 'PPF', 'NPS', 'GRATUITY', 'STOCK']
 const SHORT = ['FD', 'RD', 'STOCK']
@@ -14,6 +15,8 @@ const fields: Field[] = [
   { key: 'horizon', label: 'Horizon', type: 'select', required: true,
     options: [{ value: 'long', label: 'Long term' }, { value: 'short', label: 'Short term' }] },
   { key: 'type', label: 'Type', type: 'select', required: true, options: (d) => opts(d.horizon === 'short' ? SHORT : LONG) },
+  { key: 'fundHouse', label: 'Fund house', type: 'select', required: true, options: toOptions(FUND_HOUSES), show: (d) => d.type === 'MUTUAL_FUND' },
+  { key: 'bank', label: 'Bank', type: 'select', required: true, options: toOptions(PPF_BANKS), show: (d) => d.type === 'PPF' },
   { key: 'investedAmount', label: 'Amount invested (₹)', type: 'number', required: true },
   { key: 'currentValue', label: 'Current value (₹)', type: 'number', required: true, hint: 'Update this whenever you check your statement.' },
   { key: 'startDate', label: 'Start date', type: 'date', required: true },
@@ -50,7 +53,7 @@ export default function Investments() {
         empty={tab === 'long' ? 'No long-term investments yet. Add a mutual fund, PPF, NPS, gratuity or stock.' : 'No short-term investments yet. Add an FD, RD or stock.'}
         view={(r) => ({
           title: r.name,
-          sub: [label(r.type), r.maturityDate && `matures ${niceDate(r.maturityDate)}`].filter(Boolean).join(' · '),
+          sub: [label(r.type), r.fundHouse ?? r.bank, r.maturityDate && `matures ${niceDate(r.maturityDate)}`].filter(Boolean).join(' · '),
           value: money(r.currentValue),
           valueSub: `invested ${money(r.investedAmount)}`,
         })}

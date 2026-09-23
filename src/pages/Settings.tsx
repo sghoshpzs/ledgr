@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { PageHead } from '@/components/ui'
 import { exportAll, importAll, wipeAll } from '@/db/db'
 import { seedDemo } from '@/db/seed'
@@ -56,6 +57,12 @@ export default function Settings() {
       </section>
 
       <section className="panel stack">
+        <h2>Change history</h2>
+        <p className="muted">See every add, edit and delete, and restore deleted records.</p>
+        <div className="btn-row"><Link className="btn" to="/history">Open history</Link></div>
+      </section>
+
+      <section className="panel stack">
         <h2>Your data</h2>
         <p className="muted">Saved to your account{user?.email ? ` (${user.email})` : ''} and synced across your devices. Only you can see it. Works offline and syncs when you reconnect.</p>
         {legacy && (
@@ -70,7 +77,7 @@ export default function Settings() {
         </div>
         <div className="btn-row">
           <button className="btn" onClick={async () => { await seedDemo(); setMsg('Sample data added.') }}>Load sample data</button>
-          <button className="btn btn-danger" onClick={async () => { if (confirm('Delete all data in your account? This cannot be undone.')) { await wipeAll(); setMsg('All data deleted.') } }}>Delete all data</button>
+          <button className="btn btn-danger" onClick={async () => { if (confirm('Delete all data and its history in your account? This cannot be undone.')) { await wipeAll(); setMsg('All data deleted.') } }}>Delete all data</button>
         </div>
         {msg && <p role="status" className="muted">{msg}</p>}
       </section>

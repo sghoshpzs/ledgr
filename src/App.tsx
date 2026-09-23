@@ -8,6 +8,7 @@ import Monthly from '@/pages/Monthly'
 import Items from '@/pages/Items'
 import Settings from '@/pages/Settings'
 import Login from '@/pages/Login'
+import History from '@/pages/History'
 import { useAuth } from '@/lib/auth'
 
 export default function App() {
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="monthly" element={<Monthly />} />
         <Route path="items" element={<Items />} />
         <Route path="settings" element={<Settings />} />
+        <Route path="history" element={<History />} />
       </Route>
     </Routes>
   )

@@ -7,7 +7,7 @@ service cloud.firestore {
     match /users/{uid}/{table}/{docId} {
       allow read, write: if request.auth != null
         && request.auth.uid == uid
-        && table in ['investments', 'liabilities', 'transactions', 'items'];
+        && table in ['investments', 'liabilities', 'transactions', 'items', 'history'];
     }
   }
 }

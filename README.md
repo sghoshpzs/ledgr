@@ -29,6 +29,7 @@ Settings → **Load sample data** fills every screen with examples.
 | Cash flow | `/credits` | Credits (salary, investment payouts) and debits |
 | Monthly | `/monthly` | Credits vs spend, category split, fixed commitments for any month |
 | Renewals | `/items` | Vehicle insurance, PUC, warranties with "remind N days before" |
+| History | `/history` | Every add / edit / delete with old → new values; restore deleted records (also per record in its edit form) |
 | Settings | `/settings` | Notifications, JSON backup/restore, sample data |
 
 ## Layout
@@ -36,6 +37,7 @@ Settings → **Load sample data** fills every screen with examples.
 ```
 src/
   types.ts                 all data shapes in one place
+  config/dropdowns.ts      dropdown lists (fund houses, banks, insurers) — edit and redeploy to change
   lib/firebase.ts          Firebase app, auth, Firestore (offline cache)
   lib/auth.tsx             sign-in state, Google sign-in, log out
   db/db.ts                 per-user Firestore tables, useTable() hook, backup/restore

@@ -13,6 +13,8 @@ export interface Investment {
   maturityDate?: string
   interestRate?: number // % p.a. — FD / RD / PPF
   monthlyContribution?: number // RD / SIP / NPS
+  fundHouse?: string // MUTUAL_FUND — list in config/dropdowns.ts
+  bank?: string // PPF — list in config/dropdowns.ts
   notes?: string
 }
 
@@ -32,6 +34,8 @@ export interface Liability {
   amount: number // per instalment / premium
   frequency: Frequency
   nextDueDate: string // advances by `frequency` each time you mark it paid
+  bank?: string // *_EMI — list in config/dropdowns.ts
+  insurer?: string // *_INSURANCE — list in config/dropdowns.ts
   outstanding?: number
   endDate?: string
   notes?: string
@@ -85,4 +89,18 @@ export interface TrackedItem {
   remindDaysBefore: number
   cost?: number
   notes?: string
+}
+
+// ---------- Change history ----------
+export type HistoryAction = 'add' | 'update' | 'delete' | 'restore'
+
+export interface HistoryEntry {
+  id?: string
+  table: 'investments' | 'liabilities' | 'transactions' | 'items'
+  rowId: string
+  action: HistoryAction
+  at: string // ISO timestamp
+  title: string // row name at the time of the change
+  before?: Record<string, unknown> // update / delete
+  after?: Record<string, unknown> // add / update / restore
 }

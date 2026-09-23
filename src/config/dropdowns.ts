@@ -159,6 +159,7 @@ export const MOTOR_INSURERS = [
 export const MY_BANK_ACCOUNTS: string[] = [
   'HDFC Bank',
   'State Bank of India',
+  'Punjab National Bank',
   'ICICI Bank',
   'Axis Bank',
   'Kotak Mahindra Bank',

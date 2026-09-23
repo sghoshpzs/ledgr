@@ -4,7 +4,7 @@ import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts'
 import { useTable } from '@/db/db'
 import { Badge, PageHead, Stat } from '@/components/ui'
 import { useUpcoming } from '@/lib/upcoming'
-import { marketReturn, valueOf } from '@/lib/investments'
+import { isOpen, marketReturn, valueOf } from '@/lib/investments'
 import { balanceByBank, NOT_SET } from '@/lib/banks'
 import { txInMonth } from '@/lib/recurring'
 import { CHART_COLORS } from '@/lib/palette'
@@ -19,9 +19,10 @@ export default function Dashboard() {
   const banks = useMemo(() => (inv && liab && tx && items ? balanceByBank(liab, inv, items, tx) : []), [inv, liab, tx, items])
   const s = useMemo(() => {
     if (!inv || !liab || !tx) return undefined
-    const market = marketReturn(inv) // gain % is for market-linked investments only
-    const current = inv.reduce((a, i) => a + valueOf(i), 0)
-    const byType = Object.entries(inv.reduce<Record<string, number>>((m, i) => ({ ...m, [i.type]: (m[i.type] ?? 0) + valueOf(i) }), {}))
+    const live = inv.filter(isOpen) // closed investments are history only
+    const market = marketReturn(live) // gain % is for market-linked investments only
+    const current = live.reduce((a, i) => a + valueOf(i), 0)
+    const byType = Object.entries(live.reduce<Record<string, number>>((m, i) => ({ ...m, [i.type]: (m[i.type] ?? 0) + valueOf(i) }), {}))
       .map(([k, v]) => ({ name: label(k), value: v })).sort((a, b) => b.value - a.value)
     const m = txInMonth(tx, monthKey(today()))
     return {

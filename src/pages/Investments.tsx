@@ -4,7 +4,7 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, niceDate, pct } from '@/lib/format'
 import type { Investment } from '@/types'
-import { isFixedDeposit, marketReturn } from '@/lib/investments'
+import { isFixedDeposit, isOpen, isRedeemable, marketReturn } from '@/lib/investments'
 import { RedeemSheet } from '@/components/RedeemSheet'
 import { BROKERS, FUND_HOUSES, PPF_BANKS, bankAccountOptions, toOptions } from '@/config/dropdowns'
 
@@ -42,17 +42,25 @@ const fields: Field[] = [
   { key: 'lastTxnDate', label: 'Last transaction date', type: 'date', show: (d) => d.type === 'MUTUAL_FUND' && d.sipPaused === 'true' },
   { key: 'interestRate', label: 'Interest rate (% a year)', type: 'number', show: (d) => ['FD', 'RD', 'PPF'].includes(d.type) },
   { key: 'maturityDate', label: 'Maturity date', type: 'date', show: (d) => ['FD', 'RD', 'PPF', 'NPS'].includes(d.type) },
+  { key: 'closed', label: 'Closed', type: 'checkbox', show: (d) => isRedeemable(d),
+    hint: 'Fully redeemed — kept for the record but left out of all totals. Untick to reopen.' },
+  { key: 'closedDate', label: 'Closed on', type: 'date', show: (d) => d.closed === 'true' && isRedeemable(d) },
   { key: 'notes', label: 'Notes', type: 'textarea' },
 ]
 
 export default function Investments() {
   const [tab, setTab] = useState<'long' | 'short'>('long')
   const all = useTable('investments')
-  const rows = useMemo(() => all?.filter((r) => r.horizon === tab), [all, tab])
+  const [showClosed, setShowClosed] = useState(false)
+  const inTab = useMemo(() => all?.filter((r) => r.horizon === tab), [all, tab])
+  const open = useMemo(() => inTab?.filter(isOpen), [inTab])
+  const closedCount = (inTab?.length ?? 0) - (open?.length ?? 0)
+  // Closed ones (when shown) go last.
+  const rows = showClosed ? inTab && [...inTab].sort((a, b) => Number(!!a.closed) - Number(!!b.closed)) : open
   const [redeeming, setRedeeming] = useState<Investment | null>(null)
 
-  const market = marketReturn(rows ?? [])
-  const fixed = rows?.filter(isFixedDeposit) ?? []
+  const market = marketReturn(open ?? [])
+  const fixed = open?.filter(isFixedDeposit) ?? []
   const atMaturity = fixed.reduce((s, r) => s + (r.maturityAmount ?? r.currentValue ?? 0), 0)
 
   return (
@@ -68,6 +76,11 @@ export default function Investments() {
         </>}
         {fixed.length > 0 && <Stat label="FD & RD at maturity" value={money(atMaturity)} sub={`${fixed.length} deposit${fixed.length === 1 ? '' : 's'}`} />}
       </div>
+      {closedCount > 0 && (
+        <button className="btn btn-small closed-toggle" onClick={() => setShowClosed((v) => !v)}>
+          {showClosed ? 'Hide' : 'Show'} closed ({closedCount})
+        </button>
+      )}
       <CrudList<Investment>
         table={db.investments}
         rows={rows}
@@ -79,13 +92,15 @@ export default function Investments() {
           title: r.name,
           sub: [
             label(r.type), r.fundHouse ?? r.bank ?? r.broker, r.type === 'MUTUAL_FUND' && r.dematHolding && `demat${r.broker ? ' · ' + r.broker : ''}`, r.maturityDate && `matures ${niceDate(r.maturityDate)}`,
-            r.sipPaused && (r.lastTxnDate ? `SIP paused · last ${niceDate(r.lastTxnDate)}` : 'SIP paused'),
+            !r.closed && r.sipPaused && (r.lastTxnDate ? `SIP paused · last ${niceDate(r.lastTxnDate)}` : 'SIP paused'),
+            r.closed && `closed${r.closedDate ? ' ' + niceDate(r.closedDate) : ''}`,
           ].filter(Boolean).join(' · '),
           ...(isFixedDeposit(r)
             ? { value: money(r.maturityAmount ?? r.currentValue ?? 0), valueSub: r.interestRate !== undefined ? `${r.interestRate}% p.a.` : 'at maturity' }
             : { value: money(r.currentValue ?? 0), valueSub: `invested ${money(r.investedAmount ?? 0)}` }),
+          ...(r.closed && { badge: { text: 'closed', tone: 'info' as const } }),
         })}
-        actions={(r) => r.type === 'MUTUAL_FUND' && <button className="btn btn-small" onClick={() => setRedeeming(r)}>Redeem</button>}
+        actions={(r) => isRedeemable(r) && !r.closed && <button className="btn btn-small" onClick={() => setRedeeming(r)}>Redeem</button>}
       />
       {redeeming && <RedeemSheet fund={redeeming} onClose={() => setRedeeming(null)} />}
     </>

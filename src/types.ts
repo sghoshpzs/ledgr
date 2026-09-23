@@ -12,6 +12,8 @@ export interface Investment {
   investedAmount?: number // not used for FD / RD
   currentValue?: number // not used for FD / RD
   maturityAmount?: number // FD / RD: the one amount tracked — what it pays out at maturity
+  closed?: boolean // fully redeemed / closed: kept for the record, left out of every total
+  closedDate?: string
   startDate: string // ISO yyyy-mm-dd
   maturityDate?: string
   interestRate?: number // % p.a. — FD / RD / PPF

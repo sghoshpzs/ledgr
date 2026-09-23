@@ -46,7 +46,7 @@ export function buildUpcoming(
       })
   }
   for (const i of investments) {
-    if (!i.maturityDate) continue
+    if (!i.maturityDate || i.closed) continue
     const days = daysUntil(i.maturityDate)
     if (days >= 0 && days <= maturityWindow)
       out.push({

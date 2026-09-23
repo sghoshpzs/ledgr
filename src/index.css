@@ -96,7 +96,7 @@ button, input, select, textarea { font: inherit; color: inherit; }
   .nav-link.nav-settings { display: flex; margin-top: auto; }
   .gear { display: none; }
   .main { padding: 36px 32px 120px; width: 100%; max-width: none; margin: 0; }
-  .topbar { top: 30px; right: 32px; }
+  .topbar { top: 40px; right: 32px; }
 }
 
 /* ---------- page pieces ---------- */
@@ -175,6 +175,8 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .bank-table th, .bank-table td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; }
 .bank-table th:first-child { text-align: left; }
 .bank-table thead th { color: var(--muted); font-weight: 500; }
+
+.closed-toggle { margin-top: 10px; }
 
 /* ---------- checkbox field ---------- */
 .field-check { display: flex; align-items: flex-start; gap: 10px; font-size: 15px; cursor: pointer; }

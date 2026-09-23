@@ -3,6 +3,11 @@ import type { Investment } from '@/types'
 /** FD and RD are tracked by their maturity amount only (fixed rate — no invested / current / return). */
 export const isFixedDeposit = (i: { type?: string }) => i.type === 'FD' || i.type === 'RD'
 
+/** MF, FD and RD can be redeemed (and closed) from their row. */
+export const isRedeemable = (i: { type?: string }) => i.type === 'MUTUAL_FUND' || isFixedDeposit(i)
+
+export const isOpen = (i: Investment) => !i.closed
+
 /** The value an investment counts for in totals: maturity amount for FD / RD, current value otherwise. */
 export const valueOf = (i: Investment) =>
   isFixedDeposit(i) ? i.maturityAmount ?? i.currentValue ?? 0 : i.currentValue ?? 0
@@ -22,6 +27,7 @@ export function marketReturn(list: Investment[]) {
 export function contributesIn(i: Investment, month: string) {
   if (!i.monthlyContribution || i.startDate.slice(0, 7) > month) return false
   if (i.maturityDate && i.maturityDate.slice(0, 7) < month) return false
+  if (i.closed && (!i.closedDate || i.closedDate.slice(0, 7) < month)) return false
   if (i.sipPaused) return !!i.lastTxnDate && month <= i.lastTxnDate.slice(0, 7)
   return true
 }

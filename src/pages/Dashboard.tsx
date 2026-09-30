@@ -7,6 +7,7 @@ import { useUpcoming } from '@/lib/upcoming'
 import { isOpen, marketReturn, valueOf } from '@/lib/investments'
 import { balanceByBank, NOT_SET } from '@/lib/banks'
 import { txInMonth } from '@/lib/recurring'
+import { autopayDebits } from '@/lib/liabilities'
 import { CHART_COLORS } from '@/lib/palette'
 import { label, money, moneyShort, monthKey, monthlyEquivalent, niceDate, pct, today } from '@/lib/format'
 
@@ -24,7 +25,7 @@ export default function Dashboard() {
     const current = live.reduce((a, i) => a + valueOf(i), 0)
     const byType = Object.entries(live.reduce<Record<string, number>>((m, i) => ({ ...m, [i.type]: (m[i.type] ?? 0) + valueOf(i) }), {}))
       .map(([k, v]) => ({ name: label(k), value: v })).sort((a, b) => b.value - a.value)
-    const m = txInMonth(tx, monthKey(today()))
+    const m = [...txInMonth(tx, monthKey(today())), ...autopayDebits(liab, tx, monthKey(today()))]
     return {
       market, current, byType,
       owed: liab.reduce((a, l) => a + (l.outstanding ?? 0), 0),

@@ -3,6 +3,7 @@ import { useTable } from '@/db/db'
 import { daysUntil, label, today, toISO } from '@/lib/format'
 import { recurringBetween } from '@/lib/recurring'
 import { valueOf } from '@/lib/investments'
+import { effectiveDue, isAutopay } from '@/lib/liabilities'
 import type { Investment, Liability, TrackedItem, Transaction } from '@/types'
 
 export interface Upcoming {
@@ -38,10 +39,12 @@ export function buildUpcoming(
     })
 
   for (const l of liabilities) {
-    const days = daysUntil(l.nextDueDate)
+    const due = effectiveDue(l) // autopay: past dates were debited automatically
+    if (!due) continue
+    const days = daysUntil(due)
     if (days <= liabilityWindow)
       out.push({
-        id: `l-${l.id}`, date: l.nextDueDate, days, title: l.name, detail: label(l.type),
+        id: `l-${l.id}`, date: due, days, title: l.name, detail: `${label(l.type)}${isAutopay(l) ? ' · autopay' : ''}`,
         amount: l.amount, kind: 'liability', to: '/debts',
       })
   }

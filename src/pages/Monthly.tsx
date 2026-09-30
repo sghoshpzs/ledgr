@@ -5,6 +5,7 @@ import { PageHead, Stat } from '@/components/ui'
 import { BankChart } from '@/components/BankChart'
 import { monthNeedByBank } from '@/lib/banks'
 import { txInMonth } from '@/lib/recurring'
+import { autopayDebits } from '@/lib/liabilities'
 import { contributesIn } from '@/lib/investments'
 import { CHART_COLORS } from '@/lib/palette'
 import { label, money, monthlyEquivalent, monthKey, today } from '@/lib/format'
@@ -16,7 +17,8 @@ export default function Monthly() {
   const invs = useTable('investments')
   const items = useTable('items')
   const data = useMemo(() => allTx && liabs && {
-    tx: txInMonth(allTx, month), // one-time entries of the month + recurring debits active in it
+    // one-time entries of the month + recurring debits active in it + autopay EMIs / premiums debited in it
+    tx: [...txInMonth(allTx, month), ...autopayDebits(liabs, allTx, month)],
     committed: liabs.reduce((s, l) => s + monthlyEquivalent(l.amount, l.frequency), 0),
   }, [allTx, liabs, month])
 
@@ -24,6 +26,8 @@ export default function Monthly() {
   const totalOf = (kind: 'credit' | 'debit') => tx.filter((t) => t.kind === kind).reduce((s, t) => s + t.amount, 0)
   const credits = totalOf('credit')
   const debits = totalOf('debit')
+  const pendingOf = (kind: 'credit' | 'debit') => tx.filter((t) => t.kind === kind && t.pending).reduce((s, t) => s + t.amount, 0)
+  const estSub = (n: number) => (n ? `incl. ${money(n)} estimated` : undefined)
 
   const byCategory = Object.entries(
     tx.filter((t) => t.kind === 'debit').reduce<Record<string, number>>((m, t) => ({ ...m, [t.category]: (m[t.category] ?? 0) + t.amount }), {}),
@@ -51,8 +55,8 @@ export default function Monthly() {
       </PageHead>
 
       <div className="stats">
-        <Stat label="Credited" value={money(credits)} tone="ok" />
-        <Stat label="Spent" value={money(debits)} />
+        <Stat label="Credited" value={money(credits)} tone="ok" sub={estSub(pendingOf('credit'))} />
+        <Stat label="Spent" value={money(debits)} sub={estSub(pendingOf('debit'))} />
         <Stat label="Invested" value={money(invested)}
           sub={[sips.length && `${money(sipTotal)} in ${sips.length} SIP${sips.length === 1 ? '' : 's'}`, loggedInvest && `${money(loggedInvest)} logged`].filter(Boolean).join(' + ') || 'no SIPs or investment debits'} />
         <Stat label="Saved" value={money(saved)} sub={credits ? `${rate.toFixed(0)}% of credits` : undefined} tone={saved >= 0 ? 'ok' : 'bad'} />

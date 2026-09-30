@@ -5,7 +5,9 @@ import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, monthKey, niceDate, today } from '@/lib/format'
 import type { Transaction } from '@/types'
 import { CREDIT_SOURCES, DEBIT_CATEGORIES, bankAccountOptions } from '@/config/dropdowns'
-import { dayInMonth, debitDayOf, isRecurring, ordinal, txInMonth } from '@/lib/recurring'
+import { autopayDebits } from '@/lib/liabilities'
+import { dayInMonth, debitDayOf, isEstimated, isRecurring, ordinal, paymentsIn, txInMonth } from '@/lib/recurring'
+import { PaySheet } from '@/components/PaySheet'
 
 const opts = (xs: readonly string[]) => xs.map((v) => ({ value: v, label: label(v) }))
 
@@ -14,6 +16,8 @@ const recurringOn = (d: Record<string, string>) => d.kind === 'debit' && d.recur
 
 /** A recurring debit has no calendar date in the form; its `date` records the month it started. */
 function prepare(row: Record<string, unknown>, before: Transaction | null) {
+  // Unticking Estimated means the amount itself is the actual — drop recorded payments.
+  if (!row.estimated) delete row.payments
   if (row.kind === 'debit' && row.recurring) {
     row.debitDay = Number(row.debitDay)
     row.date = before?.recurring ? before.date : dayInMonth(monthKey(today()), row.debitDay as number)
@@ -27,6 +31,8 @@ const fields: Field[] = [
   { key: 'kind', label: 'Type', type: 'select', required: true, options: [{ value: 'credit', label: 'Credit (money in)' }, { value: 'debit', label: 'Debit (money out)' }] },
   { key: 'category', label: 'Category', type: 'select', required: true, options: (d) => opts(d.kind === 'debit' ? DEBIT_CATEGORIES : CREDIT_SOURCES) },
   { key: 'amount', label: 'Amount (₹)', type: 'number', required: true },
+  { key: 'estimated', label: 'Estimated', type: 'checkbox',
+    hint: 'A planned amount. Record what was actually paid / received with Mark paid — it replaces the estimate in totals.' },
   { key: 'recurring', label: 'Recurring', type: 'checkbox', hint: 'A fixed expense debited every month (rent, fees, bills, subscriptions).', show: (d) => d.kind === 'debit' },
   { key: 'debitDay', label: 'Debit date of the month', type: 'select', required: true, options: DAYS, show: recurringOn,
     hint: 'In shorter months it is taken on the last day.' },
@@ -40,7 +46,9 @@ type Filter = 'all' | 'credit' | 'debit'
 
 export default function Credits() {
   const [filter, setFilter] = useState<Filter>('all')
+  const [paying, setPaying] = useState<Transaction | null>(null)
   const tx = useTable('transactions')
+  const liabs = useTable('liabilities')
   // Recurring expenses first (by debit day), then one-time entries newest first.
   // Older recurring entries have no debitDay yet — show the day they were logged on, so editing keeps it.
   const all = useMemo(() => tx && tx.map((t) => (isRecurring(t) && !t.debitDay ? { ...t, debitDay: debitDayOf(t) } : t)).sort((a, b) =>
@@ -49,16 +57,18 @@ export default function Credits() {
   const rows = all?.filter((t) => filter === 'all' || t.kind === filter)
 
   const month = monthKey(today())
-  const inThisMonth = all ? txInMonth(all, month) : []
+  const inThisMonth = all ? [...txInMonth(all, month), ...autopayDebits(liabs ?? [], all, month)] : []
   const credits = inThisMonth.filter((t) => t.kind === 'credit').reduce((s, t) => s + t.amount, 0)
   const debits = inThisMonth.filter((t) => t.kind === 'debit').reduce((s, t) => s + t.amount, 0)
+  const pendingOf = (kind: 'credit' | 'debit') => inThisMonth.filter((t) => t.kind === kind && t.pending).reduce((s, t) => s + t.amount, 0)
+  const estSub = (n: number) => (n ? `incl. ${money(n)} estimated` : undefined)
 
   return (
     <>
       <PageHead title="Cash flow" />
       <div className="stats">
-        <Stat label="Credited this month" value={money(credits)} tone="ok" />
-        <Stat label="Spent this month" value={money(debits)} />
+        <Stat label="Credited this month" value={money(credits)} tone="ok" sub={estSub(pendingOf('credit'))} />
+        <Stat label="Spent this month" value={money(debits)} sub={estSub(pendingOf('debit'))} />
         <Stat label="Left over" value={money(credits - debits)} tone={credits - debits >= 0 ? 'ok' : 'bad'} />
       </div>
       <Chips value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'credit', label: 'Credits' }, { value: 'debit', label: 'Debits' }]} />
@@ -66,21 +76,50 @@ export default function Credits() {
         table={db.transactions}
         rows={rows}
         fields={fields}
-        defaults={{ kind: filter === 'debit' ? 'debit' : 'credit', category: filter === 'debit' ? 'GROCERIES' : 'SALARY', date: today(), debitDay: String(new Date().getDate()) }}
+        defaults={{ kind: filter === 'debit' ? 'debit' : 'credit', category: filter === 'debit' ? 'GROCERIES' : 'SALARY', date: today(), debitDay: String(new Date().getDate()), estimated: 'true' }}
         prepare={prepare}
         noun={filter === 'debit' ? 'debit' : 'credit'}
         empty="Nothing here yet. Add your salary credit first, then investment credits and spending."
-        view={(t) => ({
-          title: t.note || label(t.category),
-          sub: [
-            label(t.category),
-            isRecurring(t) ? `every month on the ${ordinal(debitDayOf(t))}${t.endMonth ? ` until ${monthName(t.endMonth)}` : ''}` : niceDate(t.date),
-            t.debitBank,
-          ].filter(Boolean).join(' · '),
-          value: `${t.kind === 'credit' ? '+' : '−'}${money(t.amount)}`,
-          badge: isRecurring(t) ? { text: 'monthly', tone: 'warn' } : { text: t.kind, tone: t.kind === 'credit' ? 'ok' : 'info' },
-        })}
+        view={(t) => {
+          const sign = t.kind === 'credit' ? '+' : '−'
+          // What's been actually paid: this month's payments for a recurring entry, all of them for a one-time one.
+          const paid = isRecurring(t) ? paymentsIn(t, month) : t.payments ?? []
+          const actual = paid.reduce((s, p) => s + p.amount, 0)
+          const done = t.kind === 'credit' ? 'received' : 'paid'
+          return {
+            title: t.note || label(t.category),
+            sub: [
+              label(t.category),
+              isRecurring(t) ? `every month on the ${ordinal(debitDayOf(t))}${t.endMonth ? ` until ${monthName(t.endMonth)}` : ''}` : niceDate(t.date),
+              t.debitBank,
+              isRecurring(t) && 'monthly',
+              isEstimated(t) && paid.length > 0 && `est. ${money(t.amount)}`,
+            ].filter(Boolean).join(' · '),
+            value: `${sign}${money(paid.length ? actual : t.amount)}`,
+            badge: !isEstimated(t) ? { text: t.kind, tone: t.kind === 'credit' ? 'ok' : 'info' }
+              : paid.length ? { text: isRecurring(t) ? `${done} ${monthName(month).split(' ')[0]}` : done, tone: 'ok' }
+              : { text: 'estimated', tone: 'warn' },
+          }
+        }}
+        actions={(t) => {
+          if (!isEstimated(t)) return null
+          const paid = isRecurring(t) ? paymentsIn(t, month) : t.payments ?? []
+          const undo = () => {
+            const last = paid[paid.length - 1]
+            if (last && confirm(`Remove the ${money(last.amount)} recorded on ${niceDate(last.date)}?`))
+              db.transactions.update(t, { payments: (t.payments ?? []).filter((p) => p !== last) })
+          }
+          return (
+            <>
+              {paid.length > 0 && <button className="btn btn-small" onClick={undo}>Undo</button>}
+              {paid.length === 0 && (
+                <button className="btn btn-small" onClick={() => setPaying(t)}>{t.kind === 'credit' ? 'Mark received' : 'Mark paid'}</button>
+              )}
+            </>
+          )
+        }}
       />
+      {paying && <PaySheet entry={paying} onClose={() => setPaying(null)} />}
     </>
   )
 }

@@ -49,7 +49,8 @@ export interface Liability {
   type: LiabilityType
   amount: number // per instalment / premium
   frequency: Frequency
-  nextDueDate: string // advances by `frequency` each time you mark it paid
+  nextDueDate: string // manual pay: advances by `frequency` on Mark paid; autopay: first instalment tracked
+  autopay?: boolean // debited automatically (default on; false = pay manually with Mark paid)
   debitBank?: string // your account the payment is debited from
   bank?: string // *_EMI — list in config/dropdowns.ts
   insurer?: string // *_INSURANCE — list in config/dropdowns.ts
@@ -64,6 +65,9 @@ export interface Liability {
 export type CreditSource = (typeof CREDIT_SOURCES)[number]
 export type DebitCategory = (typeof DEBIT_CATEGORIES)[number]
 
+/** An actual amount paid / received against an estimated Cash flow entry. */
+export interface Payment { date: string; amount: number }
+
 export interface Transaction {
   id?: string
   kind: 'credit' | 'debit'
@@ -71,6 +75,9 @@ export interface Transaction {
   amount: number
   date: string
   note?: string
+  estimated?: boolean // planned amount; the actuals are recorded in `payments` (Mark paid / received)
+  payments?: Payment[] // actuals against an estimated entry — per month for recurring ones
+  pending?: boolean // computed by txInMonth, never stored: still an estimate for that month
   recurring?: boolean // fixed expense that repeats every month (see lib/recurring.ts)
   debitDay?: number // recurring: day of the month it is debited (1–31)
   endMonth?: string // recurring: last month it applies (yyyy-mm); open-ended when absent

@@ -17,7 +17,7 @@ const HIDDEN = new Set(['liabilityId', 'investmentId']) // internal links, not m
 
 const KEY_LABEL: Record<string, string> = {
   pran: 'PRAN', fdNumber: 'FD number', rdNumber: 'RD number', ppfAccountNumber: 'PPF account number',
-  debitBank: 'Debit from', sipPaused: 'Paused', dematHolding: 'Demat holding', closedDate: 'Closed on', lastTxnDate: 'Last transaction date',
+  debitBank: 'Debit from', sipPaused: 'Paused', dematHolding: 'Demat holding', closedDate: 'Closed on', autopay: 'Autopay', lastTxnDate: 'Last transaction date',
 }
 /** investedAmount -> "Invested amount" */
 const keyLabel = (k: string) => { if (KEY_LABEL[k]) return KEY_LABEL[k]; const w = k.replace(/([A-Z])/g, ' $1').toLowerCase(); return w[0].toUpperCase() + w.slice(1) }
@@ -26,6 +26,8 @@ function show(v: unknown) {
   if (v === undefined || v === null || v === '') return '—'
   if (typeof v === 'number') return v.toLocaleString('en-IN')
   if (typeof v === 'boolean') return v ? 'Yes' : 'No'
+  if (Array.isArray(v)) return v.length ? v.map((p) => (p && typeof p === 'object' && 'amount' in p
+    ? `₹${Number(p.amount).toLocaleString('en-IN')} on ${niceDate(String(p.date))}` : String(p))).join(', ') : '—'
   const s = String(v)
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return niceDate(s)
   if (/^[A-Z][A-Z_]+$/.test(s)) return label(s)

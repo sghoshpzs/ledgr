@@ -16,6 +16,8 @@ export interface Field {
   hint?: string
   /** Hide the field unless this returns true (e.g. interest rate only for FD/RD/PPF). */
   show?: (draft: Draft) => boolean
+  /** Checkbox that is on unless the record says otherwise: new and older records start ticked, unticking saves false. */
+  defaultChecked?: boolean
 }
 
 export interface RowView {
@@ -85,12 +87,14 @@ export function CrudList<T extends { id?: string }>({
   const open = (row: T | 'new') => {
     if (row === 'new') {
       setOriginal(null)
-      setDraft(normalize(fields, { ...defaults }, null))
+      const d: Draft = { ...defaults }
+      for (const f of fields) if (f.defaultChecked && d[f.key] === undefined) d[f.key] = 'true'
+      setDraft(normalize(fields, d, null))
     } else {
       const d: Draft = {}
       for (const f of fields) {
         const v = (row as Record<string, unknown>)[f.key]
-        d[f.key] = v === undefined || v === null ? '' : String(v)
+        d[f.key] = v === undefined || v === null ? (f.defaultChecked ? 'true' : '') : String(v)
       }
       setOriginal(d)
       setDraft(normalize(fields, d, d))
@@ -106,7 +110,8 @@ export function CrudList<T extends { id?: string }>({
     for (const f of fields) {
       if (f.show && !f.show(draft)) { delete out[f.key]; continue }
       const raw = (draft[f.key] ?? '').trim()
-      if (raw === '') delete out[f.key]
+      if (raw === '' && f.defaultChecked) out[f.key] = false
+      else if (raw === '') delete out[f.key]
       else out[f.key] = f.type === 'number' ? Number(raw) : f.type === 'checkbox' ? true : raw
     }
     if (prepare) out = prepare(out, editing === 'new' ? null : editing)

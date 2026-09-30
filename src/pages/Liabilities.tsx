@@ -3,12 +3,11 @@ import { batch, db, useTable } from '@/db/db'
 import { CrudList, type Field } from '@/components/CrudList'
 import { PageHead, Stat } from '@/components/ui'
 import { addMonths, daysUntil, label, money, monthlyEquivalent, niceDate, today } from '@/lib/format'
+import { STEP, effectiveDue, isAutopay } from '@/lib/liabilities'
 import type { Liability } from '@/types'
 import { HEALTH_INSURERS, LOAN_BANKS, MOTOR_INSURERS, bankAccountOptions, toOptions } from '@/config/dropdowns'
 
 const TYPES = ['HOME_LOAN_EMI', 'CAR_LOAN_EMI', 'CREDIT_CARD_EMI', 'HEALTH_INSURANCE', 'CAR_INSURANCE']
-const STEP = { monthly: 1, quarterly: 3, yearly: 12 } as const
-
 const fields: Field[] = [
   { key: 'name', label: 'Name', type: 'text', required: true },
   { key: 'type', label: 'Type', type: 'select', required: true, options: TYPES.map((v) => ({ value: v, label: label(v) })) },
@@ -20,6 +19,8 @@ const fields: Field[] = [
   { key: 'frequency', label: 'How often', type: 'select', required: true,
     options: [{ value: 'monthly', label: 'Monthly' }, { value: 'quarterly', label: 'Quarterly' }, { value: 'yearly', label: 'Yearly' }] },
   { key: 'nextDueDate', label: 'Next due date', type: 'date', required: true },
+  { key: 'autopay', label: 'Autopay', type: 'checkbox', defaultChecked: true,
+    hint: 'Debited automatically (e-mandate / standing instruction). The due date moves on by itself — no Mark paid needed.' },
   { key: 'debitBank', label: 'Debit from (your bank)', type: 'select', options: bankAccountOptions(), hint: 'Account the EMI / premium is debited from.' },
   { key: 'outstanding', label: 'Outstanding balance (₹)', type: 'number', show: (d) => d.type.endsWith('_EMI') },
   { key: 'endDate', label: 'Last payment date', type: 'date', show: (d) => d.type.endsWith('_EMI') },
@@ -41,7 +42,8 @@ async function markPaid(l: Liability) {
 
 export default function Liabilities() {
   const all = useTable('liabilities')
-  const rows = useMemo(() => all && [...all].sort((a, b) => a.nextDueDate.localeCompare(b.nextDueDate)), [all])
+  // Sort by the due date that matters now (autopay rolls past dates forward); finished loans last.
+  const rows = useMemo(() => all && [...all].sort((a, b) => (effectiveDue(a) ?? '9999').localeCompare(effectiveDue(b) ?? '9999')), [all])
   const monthly = rows?.reduce((s, r) => s + monthlyEquivalent(r.amount, r.frequency), 0) ?? 0
   const owed = rows?.reduce((s, r) => s + (r.outstanding ?? 0), 0) ?? 0
 
@@ -60,15 +62,23 @@ export default function Liabilities() {
         noun="liability"
         empty="No EMIs or premiums yet. Add your loans, credit card EMIs and insurance premiums."
         view={(r) => {
-          const d = daysUntil(r.nextDueDate)
+          const due = effectiveDue(r)
+          const auto = isAutopay(r)
+          if (!due) return { title: r.name, sub: [label(r.type), r.bank ?? r.insurer, 'last payment done'].filter(Boolean).join(' · '), value: money(r.amount), badge: { text: 'ended', tone: 'info' } }
+          const d = daysUntil(due)
           return {
             title: r.name,
-            sub: [label(r.type), r.bank ?? r.insurer, `due ${niceDate(r.nextDueDate)}`].filter(Boolean).join(' · '),
+            sub: [label(r.type), r.bank ?? r.insurer, `${auto ? 'autopay' : 'due'} ${niceDate(due)}`].filter(Boolean).join(' · '),
             value: money(r.amount),
             badge: d < 0 ? { text: `${-d}d overdue`, tone: 'bad' } : d <= 7 ? { text: d === 0 ? 'due today' : `in ${d}d`, tone: 'warn' } : { text: r.frequency, tone: 'info' },
           }
         }}
-        actions={(r) => <button className="btn btn-small" onClick={() => markPaid(r)}>Mark paid</button>}
+        actions={(r) => (
+          <button className="btn btn-small" onClick={() => markPaid(r)} disabled={isAutopay(r)}
+            title={isAutopay(r) ? 'Autopay is on — this is debited automatically' : undefined}>
+            {isAutopay(r) ? 'Autopay' : 'Mark paid'}
+          </button>
+        )}
       />
     </>
   )

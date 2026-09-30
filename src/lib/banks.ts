@@ -1,10 +1,10 @@
 import { addMonths, label, niceDate, toISO, today } from '@/lib/format'
 import { isRecurring, recurringBetween, txInMonth } from '@/lib/recurring'
 import { contributesIn } from '@/lib/investments'
+import { STEP, dueInMonth, effectiveDue, isAutopay } from '@/lib/liabilities'
 import type { Investment, Liability, TrackedItem, Transaction } from '@/types'
 
 export const NOT_SET = 'Bank not set'
-const STEP = { monthly: 1, quarterly: 3, yearly: 12 } as const
 
 /** What kind of payment an outflow is — the segments of the per-bank chart. */
 export type OutflowKind = 'liability' | 'investment' | 'renewal' | 'recurring'
@@ -51,9 +51,10 @@ export function balanceByBank(
   const out: { bank?: string; o: Outflow }[] = []
 
   for (const l of liabilities) {
-    if (l.endDate && l.endDate < t) continue
-    for (let d = l.nextDueDate, n = 0; d <= until && n < 24; d = addMonths(d, STEP[l.frequency]), n++)
-      out.push({ bank: l.debitBank, o: { title: l.name, detail: `${label(l.type)} · ${d < t ? 'overdue since' : 'due'} ${niceDate(d)}`, amount: l.amount, kind: 'liability' } })
+    const first = effectiveDue(l) // autopay skips instalments already debited; manual pay keeps overdue ones
+    if (!first) continue
+    for (let n = 0, d = first; d <= until && n < 24 && !(l.endDate && d > l.endDate); n++, d = addMonths(first, n * STEP[l.frequency]))
+      out.push({ bank: l.debitBank, o: { title: l.name, detail: `${label(l.type)} · ${d < t ? 'overdue since' : isAutopay(l) ? 'autopay' : 'due'} ${niceDate(d)}`, amount: l.amount, kind: 'liability' } })
   }
   for (const i of investments) {
     if (!contributesIn(i, t.slice(0, 7))) continue
@@ -65,8 +66,6 @@ export function balanceByBank(
   }
   return group([...out, ...recurringOutflows(recurringBetween(transactions, t, until))])
 }
-
-const monthIndex = (iso: string) => Number(iso.slice(0, 4)) * 12 + Number(iso.slice(5, 7)) - 1
 
 /**
  * Planned debits for one calendar month (`yyyy-mm`), per bank: EMIs / premiums whose schedule falls in
@@ -81,11 +80,8 @@ export function monthNeedByBank(
   const out: { bank?: string; o: Outflow }[] = []
 
   for (const l of liabilities) {
-    if (l.endDate && l.endDate < start) continue
-    const step = STEP[l.frequency]
-    const diff = monthIndex(start) - monthIndex(l.nextDueDate)
-    if (((diff % step) + step) % step !== 0) continue
-    const due = addMonths(l.nextDueDate, diff)
+    const due = dueInMonth(l, month)
+    if (!due) continue
     out.push({ bank: l.debitBank, o: { title: l.name, detail: `${label(l.type)} · due ${niceDate(due)}`, amount: l.amount, kind: 'liability' } })
   }
   for (const i of investments) {

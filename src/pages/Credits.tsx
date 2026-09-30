@@ -8,6 +8,7 @@ import { CATEGORY_GROUPS, CREDIT_SOURCES, DEBIT_CATEGORIES, bankAccountOptions, 
 import { autopayDebits } from '@/lib/liabilities'
 import { countMonth, dayInMonth, debitDayOf, forNextMonth, isEstimated, isRecurring, ordinal, paymentsIn, txInMonth } from '@/lib/recurring'
 import { PaySheet } from '@/components/PaySheet'
+import { investedIn } from '@/lib/investments'
 
 const opts = (xs: readonly string[]) => xs.map((v) => ({ value: v, label: label(v) }))
 
@@ -49,15 +50,11 @@ const fields: Field[] = [
 
 type Filter = 'all' | 'credit' | 'debit'
 
-const NO_BANK = 'Bank not set'
 const GROUP_NAMES = Object.keys(CATEGORY_GROUPS)
-/** Groups in config order ("Other" last); banks A–Z with "Bank not set" last. */
-function groupOrder(a: string, b: string, depth: number) {
-  if (depth === 0) {
-    const i = (n: string) => (GROUP_NAMES.includes(n) ? GROUP_NAMES.indexOf(n) : GROUP_NAMES.length)
-    return i(a) - i(b) || a.localeCompare(b)
-  }
-  return Number(a === NO_BANK) - Number(b === NO_BANK) || a.localeCompare(b)
+/** Groups in config order, "Other" (anything not listed) last. */
+function groupOrder(a: string, b: string) {
+  const i = (n: string) => (GROUP_NAMES.includes(n) ? GROUP_NAMES.indexOf(n) : GROUP_NAMES.length)
+  return i(a) - i(b) || a.localeCompare(b)
 }
 
 export default function Credits() {
@@ -66,6 +63,7 @@ export default function Credits() {
   const [grouped, setGrouped] = useState(true)
   const tx = useTable('transactions')
   const liabs = useTable('liabilities')
+  const invs = useTable('investments')
   // Recurring expenses first (by debit day), then one-time entries newest first.
   // Fill values older entries don't have yet, so the edit form shows (and keeps) how they already behave:
   // recurring debits get their debit day, salary credits get "count for next month" on.
@@ -80,6 +78,7 @@ export default function Credits() {
 
   const month = monthKey(today())
   const inThisMonth = all ? [...txInMonth(all, month), ...autopayDebits(liabs ?? [], all, month)] : []
+  const invested = investedIn(month, invs ?? [], inThisMonth) // same figure as the Monthly page
   const credits = inThisMonth.filter((t) => t.kind === 'credit').reduce((s, t) => s + t.amount, 0)
   const debits = inThisMonth.filter((t) => t.kind === 'debit').reduce((s, t) => s + t.amount, 0)
   const pendingOf = (kind: 'credit' | 'debit') => inThisMonth.filter((t) => t.kind === kind && t.pending).reduce((s, t) => s + t.amount, 0)
@@ -91,6 +90,7 @@ export default function Credits() {
       <div className="stats">
         <Stat label="Credited this month" value={money(credits)} tone="ok" sub={estSub(pendingOf('credit'))} />
         <Stat label="Spent this month" value={money(debits)} sub={estSub(pendingOf('debit'))} />
+        <Stat label="Invested this month" value={money(invested.total)} sub={invested.summary} />
         <Stat label="Left over" value={money(credits - debits)} tone={credits - debits >= 0 ? 'ok' : 'bad'} />
       </div>
       <div className="toolbar">
@@ -104,9 +104,8 @@ export default function Credits() {
         fields={fields}
         defaults={{ kind: filter === 'debit' ? 'debit' : 'credit', category: filter === 'debit' ? 'GROCERIES' : 'SALARY', date: today(), debitDay: String(new Date().getDate()), estimated: 'true', nextMonth: filter === 'debit' ? '' : 'true' }}
         prepare={prepare}
-        // Grouped view: category group → bank it's debited from → entries. Credits have no bank, so they sit
-        // directly under their group.
-        groupBy={grouped ? (t) => (t.kind === 'debit' ? [groupOf(t.category), t.debitBank || NO_BANK] : [groupOf(t.category)]) : undefined}
+        // Grouped view: category group → entries.
+        groupBy={grouped ? (t) => [groupOf(t.category)] : undefined}
         groupOrder={groupOrder}
         groupSummary={(list) => {
           const net = txInMonth(list, month).reduce((s, t) => s + (t.kind === 'credit' ? t.amount : -t.amount), 0)

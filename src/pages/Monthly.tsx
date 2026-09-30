@@ -6,7 +6,7 @@ import { BankChart } from '@/components/BankChart'
 import { monthNeedByBank } from '@/lib/banks'
 import { txInMonth } from '@/lib/recurring'
 import { autopayDebits } from '@/lib/liabilities'
-import { contributesIn } from '@/lib/investments'
+import { investedIn } from '@/lib/investments'
 import { CHART_COLORS } from '@/lib/palette'
 import { label, money, monthlyEquivalent, monthKey, today } from '@/lib/format'
 
@@ -34,10 +34,7 @@ export default function Monthly() {
   ).map(([k, v]) => ({ name: label(k), value: v })).sort((a, b) => b.value - a.value)
 
   // Invested = running (not paused) mutual-fund SIPs of the month + debits logged in the Investment category.
-  const sips = invs?.filter((i) => i.type === 'MUTUAL_FUND' && contributesIn(i, month)) ?? []
-  const sipTotal = sips.reduce((s, i) => s + (i.monthlyContribution ?? 0), 0)
-  const loggedInvest = tx.filter((t) => t.kind === 'debit' && t.category === 'INVESTMENT').reduce((s, t) => s + t.amount, 0)
-  const invested = sipTotal + loggedInvest
+  const invested = investedIn(month, invs ?? [], tx)
 
   const banks = useMemo(
     () => (allTx && liabs && invs && items ? monthNeedByBank(month, liabs, invs, items, allTx) : undefined),
@@ -57,8 +54,7 @@ export default function Monthly() {
       <div className="stats">
         <Stat label="Credited" value={money(credits)} tone="ok" sub={estSub(pendingOf('credit'))} />
         <Stat label="Spent" value={money(debits)} sub={estSub(pendingOf('debit'))} />
-        <Stat label="Invested" value={money(invested)}
-          sub={[sips.length && `${money(sipTotal)} in ${sips.length} SIP${sips.length === 1 ? '' : 's'}`, loggedInvest && `${money(loggedInvest)} logged`].filter(Boolean).join(' + ') || 'no SIPs or investment debits'} />
+        <Stat label="Invested" value={money(invested.total)} sub={invested.summary} />
         <Stat label="Saved" value={money(saved)} sub={credits ? `${rate.toFixed(0)}% of credits` : undefined} tone={saved >= 0 ? 'ok' : 'bad'} />
         <Stat label="Recurring expenses" value={money(recurring)} sub="debits marked Recurring" />
         <Stat label="Fixed commitments" value={money(data?.committed ?? 0)} sub="EMIs + premiums, per month" />

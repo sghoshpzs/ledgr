@@ -1,4 +1,5 @@
-import type { Investment } from '@/types'
+import { money } from '@/lib/format'
+import type { Investment, Transaction } from '@/types'
 
 /** FD and RD are tracked by their maturity amount only (fixed rate — no invested / current / return). */
 export const isFixedDeposit = (i: { type?: string }) => i.type === 'FD' || i.type === 'RD'
@@ -30,4 +31,19 @@ export function contributesIn(i: Investment, month: string) {
   if (i.closed && (!i.closedDate || i.closedDate.slice(0, 7) < month)) return false
   if (i.sipPaused) return !!i.lastTxnDate && month <= i.lastTxnDate.slice(0, 7)
   return true
+}
+
+/**
+ * Invested in a month: running (not paused, not closed) mutual-fund SIPs, plus debits logged in the
+ * Investment category. `monthTx` is the month's transactions as counted (txInMonth + autopay).
+ */
+export function investedIn(month: string, investments: Investment[], monthTx: Transaction[]) {
+  const sips = investments.filter((i) => i.type === 'MUTUAL_FUND' && contributesIn(i, month))
+  const sipTotal = sips.reduce((s, i) => s + (i.monthlyContribution ?? 0), 0)
+  const logged = monthTx.filter((t) => t.kind === 'debit' && t.category === 'INVESTMENT').reduce((s, t) => s + t.amount, 0)
+  const summary = [
+    sips.length > 0 && `${money(sipTotal)} in ${sips.length} SIP${sips.length === 1 ? '' : 's'}`,
+    logged > 0 && `${money(logged)} logged`,
+  ].filter(Boolean).join(' + ') || 'no SIPs or investment debits'
+  return { total: sipTotal + logged, summary }
 }

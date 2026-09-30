@@ -1,6 +1,6 @@
 import { addMonths, label, niceDate, toISO, today } from '@/lib/format'
 import { isRecurring, recurringBetween, txInMonth } from '@/lib/recurring'
-import { contributesIn } from '@/lib/investments'
+import { contributesIn, contributionLabel } from '@/lib/investments'
 import { STEP, dueInMonth, effectiveDue, isAutopay } from '@/lib/liabilities'
 import type { Investment, Liability, TrackedItem, Transaction } from '@/types'
 
@@ -58,7 +58,7 @@ export function balanceByBank(
   }
   for (const i of investments) {
     if (!contributesIn(i, t.slice(0, 7))) continue
-    out.push({ bank: i.debitBank, o: { title: i.name, detail: `${label(i.type)} · monthly contribution`, amount: i.monthlyContribution!, kind: 'investment' } })
+    out.push({ bank: i.debitBank, o: { title: i.name, detail: `${label(i.type)} · ${contributionLabel(i)}`, amount: i.monthlyContribution!, kind: 'investment' } })
   }
   for (const it of items) {
     if (!it.cost || it.expiryDate > until) continue
@@ -86,7 +86,7 @@ export function monthNeedByBank(
   }
   for (const i of investments) {
     if (!contributesIn(i, month)) continue
-    out.push({ bank: i.debitBank, o: { title: i.name, detail: `${label(i.type)} · monthly contribution`, amount: i.monthlyContribution!, kind: 'investment' } })
+    out.push({ bank: i.debitBank, o: { title: i.name, detail: `${label(i.type)} · ${contributionLabel(i)}`, amount: i.monthlyContribution!, kind: 'investment' } })
   }
   for (const it of items) {
     if (!it.cost || it.expiryDate < start || it.expiryDate > end) continue

@@ -4,13 +4,23 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, niceDate, pct } from '@/lib/format'
 import type { Investment } from '@/types'
-import { isFixedDeposit, isOpen, isRedeemable, marketReturn } from '@/lib/investments'
+import { isFixedDeposit, isOpen, isRedeemable, isSip, marketReturn } from '@/lib/investments'
+import { ordinal } from '@/lib/recurring'
 import { RedeemSheet } from '@/components/RedeemSheet'
 import { BROKERS, FUND_HOUSES, PPF_BANKS, bankAccountOptions, toOptions } from '@/config/dropdowns'
 
 const LONG = ['MUTUAL_FUND', 'PPF', 'NPS', 'GRATUITY', 'STOCK']
 const SHORT = ['FD', 'RD', 'STOCK']
 const opts = (xs: string[]) => xs.map((v) => ({ value: v, label: label(v) }))
+
+const DAYS = Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: ordinal(i + 1) }))
+const sipOn = (d: Record<string, string>) => d.type === 'MUTUAL_FUND' && d.recurring === 'true'
+
+/** Selects save text; the SIP day is a number. */
+function prepare(row: Record<string, unknown>) {
+  if (row.sipDay !== undefined) row.sipDay = Number(row.sipDay)
+  return row
+}
 
 /** Stocks, and mutual funds held in demat, sit with a broker in a demat account. */
 const inDemat = (d: Record<string, string>) => d.type === 'STOCK' || (d.type === 'MUTUAL_FUND' && d.dematHolding === 'true')
@@ -36,10 +46,14 @@ const fields: Field[] = [
   { key: 'maturityAmount', label: 'Maturity amount (₹)', type: 'number', required: true, hint: 'What the bank pays out at maturity.', show: (d) => isFixedDeposit(d) },
   { key: 'startDate', label: 'Start date', type: 'date', required: true },
   { key: 'debitBank', label: 'Debit from (your bank)', type: 'select', options: bankAccountOptions(), hint: 'Account the contributions are paid from.' },
-  { key: 'monthlyContribution', label: 'Monthly contribution (₹)', type: 'number', show: (d) => ['RD', 'NPS', 'MUTUAL_FUND'].includes(d.type) },
-  { key: 'sipPaused', label: 'Paused', type: 'checkbox', show: (d) => d.type === 'MUTUAL_FUND',
+  { key: 'recurring', label: 'Recurring (SIP)', type: 'checkbox', defaultChecked: true, show: (d) => d.type === 'MUTUAL_FUND',
+    hint: 'A monthly SIP, debited on a fixed date. Untick for a one-time lump-sum investment.' },
+  { key: 'monthlyContribution', label: 'Monthly contribution (₹)', type: 'number', show: (d) => ['RD', 'NPS'].includes(d.type) || sipOn(d) },
+  { key: 'sipDay', label: 'SIP date of the month', type: 'select', required: true, options: DAYS, show: sipOn,
+    hint: 'In shorter months it is debited on the last day.' },
+  { key: 'sipPaused', label: 'Paused', type: 'checkbox', show: sipOn,
     hint: 'SIP stopped — it no longer counts in the month’s invested amount or bank balance.' },
-  { key: 'lastTxnDate', label: 'Last transaction date', type: 'date', show: (d) => d.type === 'MUTUAL_FUND' && d.sipPaused === 'true' },
+  { key: 'lastTxnDate', label: 'Last transaction date', type: 'date', show: (d) => sipOn(d) && d.sipPaused === 'true' },
   { key: 'interestRate', label: 'Interest rate (% a year)', type: 'number', show: (d) => ['FD', 'RD', 'PPF'].includes(d.type) },
   { key: 'maturityDate', label: 'Maturity date', type: 'date', show: (d) => ['FD', 'RD', 'PPF', 'NPS'].includes(d.type) },
   { key: 'closed', label: 'Closed', type: 'checkbox', show: (d) => isRedeemable(d),
@@ -50,7 +64,9 @@ const fields: Field[] = [
 
 export default function Investments() {
   const [tab, setTab] = useState<'long' | 'short'>('long')
-  const all = useTable('investments')
+  const stored = useTable('investments')
+  // SIPs saved before the SIP date existed: assume the day they started, so the form shows (and keeps) that.
+  const all = useMemo(() => stored?.map((i) => (isSip(i) && !i.sipDay ? { ...i, sipDay: Number(i.startDate.slice(8, 10)) } : i)), [stored])
   const [showClosed, setShowClosed] = useState(false)
   const inTab = useMemo(() => all?.filter((r) => r.horizon === tab), [all, tab])
   const open = useMemo(() => inTab?.filter(isOpen), [inTab])
@@ -85,14 +101,17 @@ export default function Investments() {
         table={db.investments}
         rows={rows}
         fields={fields}
-        defaults={{ horizon: tab, type: tab === 'short' ? 'FD' : 'MUTUAL_FUND' }}
+        defaults={{ sipDay: String(new Date().getDate()), horizon: tab, type: tab === 'short' ? 'FD' : 'MUTUAL_FUND' }}
         noun="investment"
+        prepare={prepare}
         empty={tab === 'long' ? 'No long-term investments yet. Add a mutual fund, PPF, NPS, gratuity or stock.' : 'No short-term investments yet. Add an FD, RD or stock.'}
         view={(r) => ({
           title: r.name,
           sub: [
             label(r.type), r.fundHouse ?? r.bank ?? r.broker, r.type === 'MUTUAL_FUND' && r.dematHolding && `demat${r.broker ? ' · ' + r.broker : ''}`, r.maturityDate && `matures ${niceDate(r.maturityDate)}`,
-            !r.closed && r.sipPaused && (r.lastTxnDate ? `SIP paused · last ${niceDate(r.lastTxnDate)}` : 'SIP paused'),
+            r.type === 'MUTUAL_FUND' && !r.closed && (!isSip(r) ? 'lump sum'
+              : r.sipPaused ? (r.lastTxnDate ? `SIP paused · last ${niceDate(r.lastTxnDate)}` : 'SIP paused')
+              : r.monthlyContribution ? `SIP ${money(r.monthlyContribution)}${r.sipDay ? ` on the ${ordinal(r.sipDay)}` : ''}` : 'SIP'),
             r.closed && `closed${r.closedDate ? ' ' + niceDate(r.closedDate) : ''}`,
           ].filter(Boolean).join(' · '),
           ...(isFixedDeposit(r)

@@ -1,4 +1,5 @@
 import { money } from '@/lib/format'
+import { ordinal } from '@/lib/recurring'
 import type { Investment, Transaction } from '@/types'
 
 /** FD and RD are tracked by their maturity amount only (fixed rate — no invested / current / return). */
@@ -8,6 +9,13 @@ export const isFixedDeposit = (i: { type?: string }) => i.type === 'FD' || i.typ
 export const isRedeemable = (i: { type?: string }) => i.type === 'MUTUAL_FUND' || isFixedDeposit(i)
 
 export const isOpen = (i: Investment) => !i.closed
+
+/** A mutual fund is an SIP unless marked not recurring (lump sum). */
+export const isSip = (i: Investment) => i.type === 'MUTUAL_FUND' && i.recurring !== false
+
+/** How a monthly contribution is described: "SIP on the 5th" when the date is known. */
+export const contributionLabel = (i: Investment) =>
+  i.type === 'MUTUAL_FUND' ? (i.sipDay ? `SIP on the ${ordinal(i.sipDay)}` : 'SIP') : 'monthly contribution'
 
 /** The value an investment counts for in totals: maturity amount for FD / RD, current value otherwise. */
 export const valueOf = (i: Investment) =>
@@ -27,6 +35,7 @@ export function marketReturn(list: Investment[]) {
  */
 export function contributesIn(i: Investment, month: string) {
   if (!i.monthlyContribution || i.startDate.slice(0, 7) > month) return false
+  if (i.type === 'MUTUAL_FUND' && !isSip(i)) return false // lump sum — no monthly debit
   if (i.maturityDate && i.maturityDate.slice(0, 7) < month) return false
   if (i.closed && (!i.closedDate || i.closedDate.slice(0, 7) < month)) return false
   if (i.sipPaused) return !!i.lastTxnDate && month <= i.lastTxnDate.slice(0, 7)

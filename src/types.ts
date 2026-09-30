@@ -23,6 +23,8 @@ export interface Investment {
   bank?: string // PPF — list in config/dropdowns.ts
   broker?: string // STOCK, or MUTUAL_FUND held in demat — list in config/dropdowns.ts
   folioNumber?: string // MUTUAL_FUND
+  recurring?: boolean // MUTUAL_FUND: SIP (monthly) — default on; false = one-time lump sum
+  sipDay?: number // MUTUAL_FUND SIP: day of the month it is debited (1–31)
   sipPaused?: boolean // MUTUAL_FUND: SIP stopped (absent = running)
   dematHolding?: boolean // MUTUAL_FUND: units held in a demat account (broker + demat no. instead of folio)
   lastTxnDate?: string // MUTUAL_FUND, when paused: date of the last SIP instalment

@@ -6,7 +6,7 @@ import { label, money, monthKey, niceDate, today } from '@/lib/format'
 import type { Transaction } from '@/types'
 import { CREDIT_SOURCES, DEBIT_CATEGORIES, bankAccountOptions } from '@/config/dropdowns'
 import { autopayDebits } from '@/lib/liabilities'
-import { dayInMonth, debitDayOf, isEstimated, isRecurring, ordinal, paymentsIn, txInMonth } from '@/lib/recurring'
+import { countMonth, dayInMonth, debitDayOf, forNextMonth, isEstimated, isRecurring, ordinal, paymentsIn, txInMonth } from '@/lib/recurring'
 import { PaySheet } from '@/components/PaySheet'
 
 const opts = (xs: readonly string[]) => xs.map((v) => ({ value: v, label: label(v) }))
@@ -17,6 +17,9 @@ const recurringOn = (d: Record<string, string>) => d.kind === 'debit' && d.recur
 /** A recurring debit has no calendar date in the form; its `date` records the month it started. */
 function prepare(row: Record<string, unknown>, before: Transaction | null) {
   // Unticking Estimated means the amount itself is the actual — drop recorded payments.
+  // Store next-month explicitly on credits (unset means "on" for salary), and never on debits.
+  if (row.kind === 'credit') row.nextMonth = !!row.nextMonth
+  else delete row.nextMonth
   if (!row.estimated) delete row.payments
   if (row.kind === 'debit' && row.recurring) {
     row.debitDay = Number(row.debitDay)
@@ -31,6 +34,8 @@ const fields: Field[] = [
   { key: 'kind', label: 'Type', type: 'select', required: true, options: [{ value: 'credit', label: 'Credit (money in)' }, { value: 'debit', label: 'Debit (money out)' }] },
   { key: 'category', label: 'Category', type: 'select', required: true, options: (d) => opts(d.kind === 'debit' ? DEBIT_CATEGORIES : CREDIT_SOURCES) },
   { key: 'amount', label: 'Amount (₹)', type: 'number', required: true },
+  { key: 'nextMonth', label: 'Count for next month', type: 'checkbox', show: (d) => d.kind === 'credit',
+    hint: 'Arrives at the end of a month to pay the next month’s expenses (like salary on the last working day) — it counts in the next month’s totals.' },
   { key: 'estimated', label: 'Estimated', type: 'checkbox',
     hint: 'A planned amount. Record what was actually paid / received with Mark paid — it replaces the estimate in totals.' },
   { key: 'recurring', label: 'Recurring', type: 'checkbox', hint: 'A fixed expense debited every month (rent, fees, bills, subscriptions).', show: (d) => d.kind === 'debit' },
@@ -50,8 +55,13 @@ export default function Credits() {
   const tx = useTable('transactions')
   const liabs = useTable('liabilities')
   // Recurring expenses first (by debit day), then one-time entries newest first.
-  // Older recurring entries have no debitDay yet — show the day they were logged on, so editing keeps it.
-  const all = useMemo(() => tx && tx.map((t) => (isRecurring(t) && !t.debitDay ? { ...t, debitDay: debitDayOf(t) } : t)).sort((a, b) =>
+  // Fill values older entries don't have yet, so the edit form shows (and keeps) how they already behave:
+  // recurring debits get their debit day, salary credits get "count for next month" on.
+  const all = useMemo(() => tx && tx.map((t) => ({
+    ...t,
+    ...(isRecurring(t) && !t.debitDay && { debitDay: debitDayOf(t) }),
+    ...(t.kind === 'credit' && t.nextMonth === undefined && { nextMonth: forNextMonth(t) }),
+  })).sort((a, b) =>
     Number(isRecurring(b)) - Number(isRecurring(a)) ||
     (isRecurring(a) ? debitDayOf(a) - debitDayOf(b) : b.date.localeCompare(a.date))), [tx])
   const rows = all?.filter((t) => filter === 'all' || t.kind === filter)
@@ -76,7 +86,7 @@ export default function Credits() {
         table={db.transactions}
         rows={rows}
         fields={fields}
-        defaults={{ kind: filter === 'debit' ? 'debit' : 'credit', category: filter === 'debit' ? 'GROCERIES' : 'SALARY', date: today(), debitDay: String(new Date().getDate()), estimated: 'true' }}
+        defaults={{ kind: filter === 'debit' ? 'debit' : 'credit', category: filter === 'debit' ? 'GROCERIES' : 'SALARY', date: today(), debitDay: String(new Date().getDate()), estimated: 'true', nextMonth: filter === 'debit' ? '' : 'true' }}
         prepare={prepare}
         noun={filter === 'debit' ? 'debit' : 'credit'}
         empty="Nothing here yet. Add your salary credit first, then investment credits and spending."
@@ -94,6 +104,7 @@ export default function Credits() {
               t.debitBank,
               isRecurring(t) && 'monthly',
               isEstimated(t) && paid.length > 0 && `est. ${money(t.amount)}`,
+              forNextMonth(t) && `for ${monthName(countMonth(t, paid[0]?.date ?? t.date)).split(' ')[0]}`,
             ].filter(Boolean).join(' · '),
             value: `${sign}${money(paid.length ? actual : t.amount)}`,
             badge: !isEstimated(t) ? { text: t.kind, tone: t.kind === 'credit' ? 'ok' : 'info' }

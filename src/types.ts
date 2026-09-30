@@ -75,6 +75,7 @@ export interface Transaction {
   amount: number
   date: string
   note?: string
+  nextMonth?: boolean // credit: counts in the following month's totals (default on for SALARY)
   estimated?: boolean // planned amount; the actuals are recorded in `payments` (Mark paid / received)
   payments?: Payment[] // actuals against an estimated entry — per month for recurring ones
   pending?: boolean // computed by txInMonth, never stored: still an estimate for that month

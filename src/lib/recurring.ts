@@ -30,8 +30,20 @@ const expenseKey = (t: Transaction) => `${t.category}|${(t.note ?? '').trim().to
 
 export const isEstimated = (t: Transaction) => !!t.estimated
 
-/** Actual payments recorded against an entry within `month`. */
-export const paymentsIn = (t: Transaction, month: string) => (t.payments ?? []).filter((p) => monthKey(p.date) === month)
+/** yyyy-mm of the month after `month`. */
+export const nextMonthOf = (month: string) => toISO(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 1)).slice(0, 7)
+
+/**
+ * Credits marked "count for next month" (salary by default — it lands on the last working day and pays the
+ * next month's expenses) count in the month after they arrive. Unset on a salary means on.
+ */
+export const forNextMonth = (t: Transaction) => t.kind === 'credit' && (t.nextMonth ?? t.category === 'SALARY')
+
+/** The month whose totals money dated `date` on this entry counts in. */
+export const countMonth = (t: Transaction, date: string) => (forNextMonth(t) ? nextMonthOf(monthKey(date)) : monthKey(date))
+
+/** Actual payments recorded against an entry that count in `month`. */
+export const paymentsIn = (t: Transaction, month: string) => (t.payments ?? []).filter((p) => countMonth(t, p.date) === month)
 
 const actual = (t: Transaction, p: Payment): Transaction => ({ ...t, date: p.date, amount: p.amount, pending: false })
 
@@ -48,7 +60,7 @@ export function txInMonth(all: Transaction[], month: string): Transaction[] {
   for (const t of all) {
     if (!isRecurring(t)) {
       if (t.payments?.length) out.push(...paymentsIn(t, month).map((p) => actual(t, p)))
-      else if (monthKey(t.date) === month) out.push(isEstimated(t) ? { ...t, pending: true } : t)
+      else if (countMonth(t, t.date) === month) out.push(isEstimated(t) ? { ...t, pending: true } : t)
       continue
     }
     if (!activeIn(t, month) && !paymentsIn(t, month).length) continue
@@ -66,7 +78,7 @@ export function txInMonth(all: Transaction[], month: string): Transaction[] {
 /** Recurring debits falling between `from` and `until` (inclusive), each dated on its debit day. */
 export function recurringBetween(all: Transaction[], from: string, until: string): Transaction[] {
   const out: Transaction[] = []
-  for (let m = monthKey(from); m <= monthKey(until); m = toISO(new Date(Number(m.slice(0, 4)), Number(m.slice(5, 7)), 1)).slice(0, 7))
+  for (let m = monthKey(from); m <= monthKey(until); m = nextMonthOf(m))
     for (const t of txInMonth(all, m)) if (isRecurring(t) && t.date >= from && t.date <= until) out.push(t)
   return out
 }

@@ -4,7 +4,7 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, monthKey, niceDate, today } from '@/lib/format'
 import type { Transaction } from '@/types'
-import { CREDIT_SOURCES, DEBIT_CATEGORIES, bankAccountOptions } from '@/config/dropdowns'
+import { CATEGORY_GROUPS, CREDIT_SOURCES, DEBIT_CATEGORIES, bankAccountOptions, groupOf } from '@/config/dropdowns'
 import { autopayDebits } from '@/lib/liabilities'
 import { countMonth, dayInMonth, debitDayOf, forNextMonth, isEstimated, isRecurring, ordinal, paymentsIn, txInMonth } from '@/lib/recurring'
 import { PaySheet } from '@/components/PaySheet'
@@ -49,9 +49,21 @@ const fields: Field[] = [
 
 type Filter = 'all' | 'credit' | 'debit'
 
+const NO_BANK = 'Bank not set'
+const GROUP_NAMES = Object.keys(CATEGORY_GROUPS)
+/** Groups in config order ("Other" last); banks A–Z with "Bank not set" last. */
+function groupOrder(a: string, b: string, depth: number) {
+  if (depth === 0) {
+    const i = (n: string) => (GROUP_NAMES.includes(n) ? GROUP_NAMES.indexOf(n) : GROUP_NAMES.length)
+    return i(a) - i(b) || a.localeCompare(b)
+  }
+  return Number(a === NO_BANK) - Number(b === NO_BANK) || a.localeCompare(b)
+}
+
 export default function Credits() {
   const [filter, setFilter] = useState<Filter>('all')
   const [paying, setPaying] = useState<Transaction | null>(null)
+  const [grouped, setGrouped] = useState(true)
   const tx = useTable('transactions')
   const liabs = useTable('liabilities')
   // Recurring expenses first (by debit day), then one-time entries newest first.
@@ -81,13 +93,25 @@ export default function Credits() {
         <Stat label="Spent this month" value={money(debits)} sub={estSub(pendingOf('debit'))} />
         <Stat label="Left over" value={money(credits - debits)} tone={credits - debits >= 0 ? 'ok' : 'bad'} />
       </div>
-      <Chips value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'credit', label: 'Credits' }, { value: 'debit', label: 'Debits' }]} />
+      <div className="toolbar">
+        <Chips value={filter} onChange={setFilter} options={[{ value: 'all', label: 'All' }, { value: 'credit', label: 'Credits' }, { value: 'debit', label: 'Debits' }]} />
+        <Chips value={grouped ? 'grouped' : 'list'} onChange={(v) => setGrouped(v === 'grouped')}
+          options={[{ value: 'grouped', label: 'Grouped' }, { value: 'list', label: 'List' }]} />
+      </div>
       <CrudList<Transaction>
         table={db.transactions}
         rows={rows}
         fields={fields}
         defaults={{ kind: filter === 'debit' ? 'debit' : 'credit', category: filter === 'debit' ? 'GROCERIES' : 'SALARY', date: today(), debitDay: String(new Date().getDate()), estimated: 'true', nextMonth: filter === 'debit' ? '' : 'true' }}
         prepare={prepare}
+        // Grouped view: category group → bank it's debited from → entries. Credits have no bank, so they sit
+        // directly under their group.
+        groupBy={grouped ? (t) => (t.kind === 'debit' ? [groupOf(t.category), t.debitBank || NO_BANK] : [groupOf(t.category)]) : undefined}
+        groupOrder={groupOrder}
+        groupSummary={(list) => {
+          const net = txInMonth(list, month).reduce((s, t) => s + (t.kind === 'credit' ? t.amount : -t.amount), 0)
+          return <><span className="row-value">{net > 0 ? '+' : net < 0 ? '−' : ''}{money(Math.abs(net))}</span><span className="row-sub">this month</span></>
+        }}
         noun={filter === 'debit' ? 'debit' : 'credit'}
         empty="Nothing here yet. Add your salary credit first, then investment credits and spending."
         view={(t) => {

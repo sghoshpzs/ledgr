@@ -215,5 +215,27 @@ export const DEBIT_CATEGORIES = [
   'OTHER',
 ] as const
 
+/**
+ * Cash flow → grouped view: which categories sit under which heading. The order here is the order on
+ * screen. A category not listed anywhere shows under "Other". Rename or regroup freely.
+ */
+export const CATEGORY_GROUPS: Record<string, readonly string[]> = {
+  'Income': ['SALARY', 'DIVIDEND'],
+  'Investment returns': ['MF_REDEMPTION', 'FD_MATURITY', 'RD_MATURITY', 'PPF_MATURITY', 'NPS_WITHDRAWAL', 'GRATUITY', 'STOCK_SALE'],
+  'Investment': ['INVESTMENT'],
+  'EMI': ['EMI'],
+  'Insurance': ['INSURANCE'],
+  'Household Expenses': ['RENT', 'HOME_MAINTENANCE', 'HOUSEHOLD_HELP', 'HOUSEHOLD_GOODS', 'FURNITURE', 'APPLIANCES', 'GROCERIES'],
+  'Education': ['SCHOOL_FEES', 'TUITION_FEES', 'EDUCATION_FEES', 'TRANSPORTATION_FEES'],
+  'Bills & Subscriptions': ['ELECTRICITY_BILL', 'GAS_CONNECTION', 'MOBILE_RECHARGE', 'DTH_CONNECTION', 'OTT_SUBSCRIPTION', 'UTILITIES'],
+  'Food & Shopping': ['ONLINE_FOOD', 'EATING_OUT', 'ONLINE_PURCHASE', 'SHOPPING'],
+  'Health': ['MEDICINES', 'DOCTORS', 'HEALTH'],
+  'Travel, Cash & Wallets': ['TRANSPORT', 'CASH_WITHDRAWAL', 'UPI_RECHARGE'],
+}
+
+/** The CATEGORY_GROUPS heading for a category ("Other" when it isn't listed). */
+export const groupOf = (category: string) =>
+  Object.keys(CATEGORY_GROUPS).find((g) => CATEGORY_GROUPS[g].includes(category)) ?? 'Other'
+
 /** "Debit from" options: blank (not set) first, then your accounts. */
 export const bankAccountOptions = () => [{ value: '', label: '— Not set —' }, ...toOptions(MY_BANK_ACCOUNTS)]

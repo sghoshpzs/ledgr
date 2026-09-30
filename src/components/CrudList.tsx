@@ -40,6 +40,28 @@ interface Props<T extends { id?: string }> {
   actions?: (row: T) => ReactNode
   /** Last chance to adjust a row before it is saved (e.g. fill a hidden field). `before` is the row being edited. */
   prepare?: (row: Record<string, unknown>, before: T | null) => Record<string, unknown>
+  /** Show rows as a collapsible tree: each row's path of group names, outermost first (e.g. [group, bank]). */
+  groupBy?: (row: T) => string[]
+  /** Right-hand figure for a group header, from the rows under it (e.g. this month's total). */
+  groupSummary?: (rows: T[]) => ReactNode
+  /** Sort order of sibling groups at a given depth (default A–Z). */
+  groupOrder?: (a: string, b: string, depth: number) => number
+}
+
+interface GroupNode<T> { name: string; rows: T[]; children: Map<string, GroupNode<T>> }
+
+function buildTree<T>(rows: T[], path: (row: T) => string[]) {
+  const root: GroupNode<T> = { name: '', rows: [], children: new Map() }
+  for (const row of rows) {
+    let node = root
+    node.rows.push(row)
+    for (const name of path(row)) {
+      if (!node.children.has(name)) node.children.set(name, { name, rows: [], children: new Map() })
+      node = node.children.get(name)!
+      node.rows.push(row)
+    }
+  }
+  return root
 }
 
 const baseOptions = (f: Field, d: Draft): Option[] =>
@@ -78,7 +100,7 @@ function normalize(fields: Field[], d: Draft, original: Draft | null) {
  * is just a field list and a row renderer on top of this — copy a page to add a new module.
  */
 export function CrudList<T extends { id?: string }>({
-  table, rows, fields, defaults, view, noun, empty, actions, prepare,
+  table, rows, fields, defaults, view, noun, empty, actions, prepare, groupBy, groupSummary, groupOrder,
 }: Props<T>) {
   const [editing, setEditing] = useState<T | 'new' | null>(null)
   const [draft, setDraft] = useState<Draft>({})
@@ -127,29 +149,56 @@ export function CrudList<T extends { id?: string }>({
     return true
   }
 
+  const renderRows = (list: T[]) => (
+    <ul className="rows">
+      {list.map((row) => {
+        const v = view(row)
+        return (
+          <li key={row.id} className="row">
+            <button className="row-main" onClick={() => open(row)} aria-label={`Edit ${v.title}`}>
+              <span className="row-text">
+                <span className="row-title">{v.title}</span>
+                {v.sub && <span className="row-sub">{v.sub}</span>}
+              </span>
+              <span className="row-figure">
+                {v.value && <span className="row-value">{v.value}</span>}
+                {v.badge ? <Badge tone={v.badge.tone}>{v.badge.text}</Badge> : v.valueSub && <span className="row-sub">{v.valueSub}</span>}
+              </span>
+            </button>
+            {actions && <div className="row-actions">{actions(row)}</div>}
+          </li>
+        )
+      })}
+    </ul>
+  )
+
+  /** Nested, collapsed-by-default groups; the innermost level lists the rows. */
+  const renderGroups = (node: GroupNode<T>, depth: number): ReactNode => {
+    const kids = [...node.children.values()].sort((a, b) => (groupOrder ? groupOrder(a.name, b.name, depth) : a.name.localeCompare(b.name)))
+    return (
+      <ul className={`groups depth-${depth}`}>
+        {kids.map((g) => (
+          <li key={g.name} className="group">
+            <details>
+              <summary className="group-head">
+                <span className="row-text">
+                  <span className="row-title">{g.name}</span>
+                  <span className="row-sub">{g.rows.length} {g.rows.length === 1 ? 'entry' : 'entries'}</span>
+                </span>
+                {groupSummary && <span className="row-figure">{groupSummary(g.rows)}</span>}
+              </summary>
+              <div className="group-body">{g.children.size ? renderGroups(g, depth + 1) : renderRows(g.rows)}</div>
+            </details>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
   return (
     <>
       {rows && rows.length === 0 && <p className="empty">{empty}</p>}
-      <ul className="rows">
-        {rows?.map((row) => {
-          const v = view(row)
-          return (
-            <li key={row.id} className="row">
-              <button className="row-main" onClick={() => open(row)} aria-label={`Edit ${v.title}`}>
-                <span className="row-text">
-                  <span className="row-title">{v.title}</span>
-                  {v.sub && <span className="row-sub">{v.sub}</span>}
-                </span>
-                <span className="row-figure">
-                  {v.value && <span className="row-value">{v.value}</span>}
-                  {v.badge ? <Badge tone={v.badge.tone}>{v.badge.text}</Badge> : v.valueSub && <span className="row-sub">{v.valueSub}</span>}
-                </span>
-              </button>
-              {actions && <div className="row-actions">{actions(row)}</div>}
-            </li>
-          )
-        })}
-      </ul>
+      {rows && groupBy ? renderGroups(buildTree(rows, groupBy), 0) : rows && renderRows(rows)}
 
       <button className="fab" onClick={() => open('new')}>
         <Icon name="plus" size={20} /> Add {noun}

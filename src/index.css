@@ -137,6 +137,20 @@ button, input, select, textarea { font: inherit; color: inherit; }
 .row-actions { display: flex; justify-content: flex-end; padding: 0 14px 10px; }
 .row-actions:empty { display: none; }
 
+/* ---------- grouped list (group → bank → rows) ---------- */
+.toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; }
+.groups { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.groups .groups { margin-top: 8px; gap: 6px; }
+.group > details { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.groups .groups .group > details { background: var(--bg); }
+.group-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; cursor: pointer; list-style: none; }
+.group-head::-webkit-details-marker { display: none; }
+.group-head::before { content: '▸'; color: var(--muted); font-size: 16px; width: 12px; flex-shrink: 0; }
+.group > details[open] > .group-head::before { content: '▾'; }
+.group-head .row-text { flex: 1; }
+.group-body { padding: 0 10px 10px; }
+.group-body > .rows { margin-top: 0; }
+
 /* ---------- dashboard timeline ---------- */
 .timeline { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
 .tl-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px 10px 10px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); color: inherit; text-decoration: none; }

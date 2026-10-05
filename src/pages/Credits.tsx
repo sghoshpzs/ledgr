@@ -38,11 +38,12 @@ const fields: Field[] = [
   { key: 'nextMonth', label: 'Count for next month', type: 'checkbox', show: (d) => d.kind === 'credit',
     hint: 'Arrives at the end of a month to pay the next month’s expenses (like salary on the last working day) — it counts in the next month’s totals.' },
   { key: 'estimated', label: 'Estimated', type: 'checkbox',
-    hint: 'A planned amount. Record what was actually paid / received with Mark paid — it replaces the estimate in totals.' },
+    hint: 'A monthly budget: the estimate counts every month from its date (until Last month, if set). Record what was actually paid / received with Add expense / Add actual — it replaces the estimate for that month.' },
   { key: 'recurring', label: 'Recurring', type: 'checkbox', hint: 'A fixed expense debited every month (rent, fees, bills, subscriptions).', show: (d) => d.kind === 'debit' },
   { key: 'debitDay', label: 'Debit date of the month', type: 'select', required: true, options: DAYS, show: recurringOn,
     hint: 'In shorter months it is taken on the last day.' },
-  { key: 'endMonth', label: 'Last month (optional)', type: 'month', show: recurringOn, hint: 'Leave empty if it continues.' },
+  { key: 'endMonth', label: 'Last month (optional)', type: 'month', show: (d) => recurringOn(d) || d.estimated === 'true',
+    hint: 'Leave empty if it continues. For a one-off estimate, pick the same month as its date.' },
   { key: 'date', label: 'Date', type: 'date', required: true, show: (d) => !recurringOn(d) },
   { key: 'debitBank', label: 'Debit from (your bank)', type: 'select', options: bankAccountOptions(), show: (d) => d.kind === 'debit' },
   { key: 'note', label: 'Note', type: 'text' },
@@ -133,16 +134,18 @@ export default function Credits() {
             title: t.note || label(t.category),
             sub: [
               label(t.category),
-              isRecurring(t) ? `every month on the ${ordinal(debitDayOf(t))}${t.endMonth ? ` until ${monthName(t.endMonth)}` : ''}` : niceDate(t.date),
+              isRecurring(t) ? `every month on the ${ordinal(debitDayOf(t))}${t.endMonth ? ` until ${monthName(t.endMonth)}` : ''}`
+                : isEstimated(t) ? `monthly from ${monthName(countMonth(t, t.date))}${t.endMonth ? ` until ${monthName(t.endMonth)}` : ''}`
+                : niceDate(t.date),
               t.debitBank,
               isRecurring(t) && 'monthly',
               isEstimated(t) && paid.length > 0 && `est. ${money(t.amount)}`,
               paid.length > 1 && `${paid.length} entries`,
-              forNextMonth(t) && `for ${monthName(countMonth(t, paid[0]?.date ?? t.date)).split(' ')[0]}`,
+              forNextMonth(t) && `for ${monthName(month).split(' ')[0]}`,
             ].filter(Boolean).join(' · '),
             value: `${sign}${money(paid.length ? actual : t.amount)}`,
             badge: !isEstimated(t) ? { text: t.kind, tone: t.kind === 'credit' ? 'ok' : 'info' }
-              : paid.length ? { text: isRecurring(t) ? `${done} ${monthName(month).split(' ')[0]}` : done, tone: 'ok' }
+              : paid.length ? { text: `${done} ${monthName(month).split(' ')[0]}`, tone: 'ok' }
               : { text: 'estimated', tone: 'warn' },
           }
         }}

@@ -45,6 +45,10 @@ export const forNextMonth = (t: Transaction) => t.kind === 'credit' && (t.nextMo
 /** The month whose totals money dated `date` on this entry counts in. */
 export const countMonth = (t: Transaction, date: string) => (forNextMonth(t) ? nextMonthOf(monthKey(date)) : monthKey(date))
 
+/** An estimated (non-recurring) entry is a monthly budget from the month it counts in up to `endMonth`. */
+export const estimateIn = (t: Transaction, month: string) =>
+  countMonth(t, t.date) <= month && (!t.endMonth || month <= t.endMonth)
+
 /** Actual payments recorded against an entry that count in `month`. */
 export const paymentsIn = (t: Transaction, month: string) => (t.payments ?? []).filter((p) => countMonth(t, p.date) === month)
 
@@ -52,8 +56,9 @@ const actual = (t: Transaction, p: Payment): Transaction => ({ ...t, date: p.dat
 
 /**
  * Every transaction that counts in `month`, at the amount that counts:
- * - one-time entry: its actual payments in the month, if it has any; otherwise its own amount when dated
- *   in the month (flagged `pending` while it is still an estimate);
+ * - estimated entry (a monthly budget): that month's actual payments, else its estimate (flagged `pending`)
+ *   in every month from the month of its `date` up to `endMonth` if set, on the same day of the month;
+ * - other one-time entry: its own amount when dated in the month;
  * - recurring debit active in the month: that month's actual payments, else a copy on its debit day at the
  *   estimated / fixed amount. Every recurring debit counts on its own, even when two look alike.
  */
@@ -64,7 +69,9 @@ export function txInMonth(all: Transaction[], month: string): Transaction[] {
     if (paid.length) out.push(...paid.map((p) => actual(t, p)))
     else if (isRecurring(t)) {
       if (activeIn(t, month)) out.push({ ...t, date: dayInMonth(month, debitDayOf(t)), pending: isEstimated(t) })
-    } else if (!t.payments?.length && countMonth(t, t.date) === month) out.push(isEstimated(t) ? { ...t, pending: true } : t)
+    } else if (isEstimated(t)) {
+      if (estimateIn(t, month)) out.push({ ...t, date: dayInMonth(dateMonthFor(t, month), Number(t.date.slice(8, 10))), pending: true })
+    } else if (countMonth(t, t.date) === month) out.push(t)
   }
   return out
 }

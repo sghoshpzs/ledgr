@@ -83,7 +83,7 @@ export interface Transaction {
   pending?: boolean // computed by txInMonth, never stored: still an estimate for that month
   recurring?: boolean // fixed expense that repeats every month (see lib/recurring.ts)
   debitDay?: number // recurring: day of the month it is debited (1–31)
-  endMonth?: string // recurring: last month it applies (yyyy-mm); open-ended when absent
+  endMonth?: string // recurring / estimated: last month it applies (yyyy-mm); open-ended when absent
   debitBank?: string // your account it is paid from — config/dropdowns.ts MY_BANK_ACCOUNTS
   liabilityId?: string // optional link when a debit settles a liability
   investmentId?: string // optional link when a credit/debit relates to an investment

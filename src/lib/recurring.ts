@@ -25,13 +25,16 @@ export function ordinal(n: number) {
   return `${n}${s}`
 }
 
-/** Same expense logged more than once as recurring (older data) should count once — keep the latest. */
-const expenseKey = (t: Transaction) => `${t.category}|${(t.note ?? '').trim().toLowerCase()}|${t.debitBank ?? ''}`
-
 export const isEstimated = (t: Transaction) => !!t.estimated
 
 /** yyyy-mm of the month after `month`. */
 export const nextMonthOf = (month: string) => toISO(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 1)).slice(0, 7)
+
+/** yyyy-mm of the month before `month`. */
+export const prevMonthOf = (month: string) => toISO(new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 2, 1)).slice(0, 7)
+
+/** The calendar month in which money must be dated to count in `month` (the month before, for next-month credits). */
+export const dateMonthFor = (t: Transaction, month: string) => (forNextMonth(t) ? prevMonthOf(month) : month)
 
 /**
  * Credits marked "count for next month" (salary by default — it lands on the last working day and pays the
@@ -52,25 +55,16 @@ const actual = (t: Transaction, p: Payment): Transaction => ({ ...t, date: p.dat
  * - one-time entry: its actual payments in the month, if it has any; otherwise its own amount when dated
  *   in the month (flagged `pending` while it is still an estimate);
  * - recurring debit active in the month: that month's actual payments, else a copy on its debit day at the
- *   estimated / fixed amount.
+ *   estimated / fixed amount. Every recurring debit counts on its own, even when two look alike.
  */
 export function txInMonth(all: Transaction[], month: string): Transaction[] {
   const out: Transaction[] = []
-  const recurring = new Map<string, Transaction>()
   for (const t of all) {
-    if (!isRecurring(t)) {
-      if (t.payments?.length) out.push(...paymentsIn(t, month).map((p) => actual(t, p)))
-      else if (countMonth(t, t.date) === month) out.push(isEstimated(t) ? { ...t, pending: true } : t)
-      continue
-    }
-    if (!activeIn(t, month) && !paymentsIn(t, month).length) continue
-    const prev = recurring.get(expenseKey(t))
-    if (!prev || t.date > prev.date) recurring.set(expenseKey(t), t)
-  }
-  for (const t of recurring.values()) {
     const paid = paymentsIn(t, month)
     if (paid.length) out.push(...paid.map((p) => actual(t, p)))
-    else if (activeIn(t, month)) out.push({ ...t, date: dayInMonth(month, debitDayOf(t)), pending: isEstimated(t) })
+    else if (isRecurring(t)) {
+      if (activeIn(t, month)) out.push({ ...t, date: dayInMonth(month, debitDayOf(t)), pending: isEstimated(t) })
+    } else if (!t.payments?.length && countMonth(t, t.date) === month) out.push(isEstimated(t) ? { ...t, pending: true } : t)
   }
   return out
 }

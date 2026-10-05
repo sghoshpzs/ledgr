@@ -68,7 +68,7 @@ export type CreditSource = (typeof CREDIT_SOURCES)[number]
 export type DebitCategory = (typeof DEBIT_CATEGORIES)[number]
 
 /** An actual amount paid / received against an estimated Cash flow entry. */
-export interface Payment { date: string; amount: number }
+export interface Payment { date: string; amount: number; note?: string }
 
 export interface Transaction {
   id?: string
@@ -78,7 +78,7 @@ export interface Transaction {
   date: string
   note?: string
   nextMonth?: boolean // credit: counts in the following month's totals (default on for SALARY)
-  estimated?: boolean // planned amount; the actuals are recorded in `payments` (Mark paid / received)
+  estimated?: boolean // planned amount; the actuals are recorded in `payments` (Add expense / Add actual)
   payments?: Payment[] // actuals against an estimated entry — per month for recurring ones
   pending?: boolean // computed by txInMonth, never stored: still an estimate for that month
   recurring?: boolean // fixed expense that repeats every month (see lib/recurring.ts)

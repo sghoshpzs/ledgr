@@ -202,15 +202,17 @@ export const DEBIT_CATEGORIES = [
   // Loans, insurance, savings
   'EMI', 'INSURANCE', 'INVESTMENT',
   // Home & education
-  'RENT', 'BROKERAGE', 'SCHOOL_FEES', 'TUITION_FEES', 'EDUCATION_FEES', 'TRANSPORTATION_FEES', 'HOME_MAINTENANCE', 'HOUSEHOLD_HELP', 'HOUSEHOLD_GOODS', 'FURNITURE', 'APPLIANCES', 'HOUSE SHIFTING', 'GROCERIES',
+  'RENT', 'BROKERAGE', 'SCHOOL_FEES', 'TUITION_FEES', 'EDUCATION_FEES', 'TRANSPORTATION_FEES', 'HOME_MAINTENANCE', 'HOUSEHOLD_HELP', 'HOUSEHOLD_GOODS', 'FURNITURE', 'APPLIANCES', 'HOUSE_SHIFTING',
   // Bills & subscriptions
   'ELECTRICITY_BILL', 'GAS_CONNECTION', 'MOBILE_RECHARGE', 'DTH_CONNECTION', 'OTT_SUBSCRIPTION', 'AI_SUBSCRIPTION', 'UTILITIES',
   // Food & shopping
   'GROCERIES', 'ONLINE_FOOD', 'EATING_OUT', 'ONLINE_PURCHASE', 'SHOPPING',
   // Health
   'MEDICINES', 'DOCTORS', 'HEALTH',
+  // Family — money sent to parents, spouse etc. (say who in the note)
+  'FAMILY_SUPPORT',
   // Travel, cash & wallets
-  'TRANSPORT', 'CASH_WITHDRAWAL', 'UPI_RECHARGE',
+  'TRANSPORT', 'FUEL', 'CASH_WITHDRAWAL', 'UPI_RECHARGE',
   'OTHER',
 ] as const
 
@@ -224,12 +226,14 @@ export const CATEGORY_GROUPS: Record<string, readonly string[]> = {
   'Investment': ['INVESTMENT'],
   'EMI': ['EMI'],
   'Insurance': ['INSURANCE'],
-  'Household Expenses': ['RENT', 'HOME_MAINTENANCE', 'HOUSEHOLD_HELP', 'HOUSEHOLD_GOODS', 'FURNITURE', 'APPLIANCES', 'GROCERIES'],
+  // 'HOUSE SHIFTING' (with a space) is the old spelling — kept so entries saved with it still group here.
+  'Household Expenses': ['RENT', 'BROKERAGE', 'HOME_MAINTENANCE', 'HOUSEHOLD_HELP', 'HOUSEHOLD_GOODS', 'FURNITURE', 'APPLIANCES', 'HOUSE_SHIFTING', 'HOUSE SHIFTING', 'GROCERIES'],
   'Education': ['SCHOOL_FEES', 'TUITION_FEES', 'EDUCATION_FEES', 'TRANSPORTATION_FEES'],
   'Bills & Subscriptions': ['ELECTRICITY_BILL', 'GAS_CONNECTION', 'MOBILE_RECHARGE', 'DTH_CONNECTION', 'OTT_SUBSCRIPTION', 'AI_SUBSCRIPTION', 'UTILITIES'],
   'Food & Shopping': ['ONLINE_FOOD', 'EATING_OUT', 'ONLINE_PURCHASE', 'SHOPPING'],
   'Health': ['MEDICINES', 'DOCTORS', 'HEALTH'],
-  'Travel, Cash & Wallets': ['TRANSPORT', 'CASH_WITHDRAWAL', 'UPI_RECHARGE'],
+  'Family': ['FAMILY_SUPPORT'],
+  'Travel, Cash & Wallets': ['TRANSPORT', 'FUEL', 'CASH_WITHDRAWAL', 'UPI_RECHARGE'],
 }
 
 /** The CATEGORY_GROUPS heading for a category ("Other" when it isn't listed). */

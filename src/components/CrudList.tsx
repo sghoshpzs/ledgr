@@ -46,6 +46,8 @@ interface Props<T extends { id?: string }> {
   groupSummary?: (rows: T[]) => ReactNode
   /** Sort order of sibling groups at a given depth (default A–Z). */
   groupOrder?: (a: string, b: string, depth: number) => number
+  /** Start groups expanded (default collapsed). */
+  groupsOpen?: boolean
 }
 
 interface GroupNode<T> { name: string; rows: T[]; children: Map<string, GroupNode<T>> }
@@ -100,7 +102,7 @@ function normalize(fields: Field[], d: Draft, original: Draft | null) {
  * is just a field list and a row renderer on top of this — copy a page to add a new module.
  */
 export function CrudList<T extends { id?: string }>({
-  table, rows, fields, defaults, view, noun, empty, actions, prepare, groupBy, groupSummary, groupOrder,
+  table, rows, fields, defaults, view, noun, empty, actions, prepare, groupBy, groupSummary, groupOrder, groupsOpen,
 }: Props<T>) {
   const [editing, setEditing] = useState<T | 'new' | null>(null)
   const [draft, setDraft] = useState<Draft>({})
@@ -179,7 +181,7 @@ export function CrudList<T extends { id?: string }>({
       <ul className={`groups depth-${depth}`}>
         {kids.map((g) => (
           <li key={g.name} className="group">
-            <details>
+            <details open={groupsOpen}>
               <summary className="group-head">
                 <span className="row-text">
                   <span className="row-title">{g.name}</span>

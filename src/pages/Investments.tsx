@@ -4,9 +4,10 @@ import { CrudList, type Field } from '@/components/CrudList'
 import { Chips, PageHead, Stat } from '@/components/ui'
 import { label, money, niceDate, pct } from '@/lib/format'
 import type { Investment } from '@/types'
-import { isFixedDeposit, isOpen, isRedeemable, isSip, marketReturn } from '@/lib/investments'
+import { isFixedDeposit, isOpen, isRedeemable, isSip, marketReturn, valueOf } from '@/lib/investments'
 import { ordinal } from '@/lib/recurring'
 import { RedeemSheet } from '@/components/RedeemSheet'
+import { TopUpSheet } from '@/components/TopUpSheet'
 import { BROKERS, FUND_HOUSES, PPF_BANKS, bankAccountOptions, toOptions } from '@/config/dropdowns'
 
 const LONG = ['MUTUAL_FUND', 'PPF', 'NPS', 'GRATUITY', 'STOCK']
@@ -62,6 +63,18 @@ const fields: Field[] = [
   { key: 'notes', label: 'Notes', type: 'textarea' },
 ]
 
+/** Investments that take an ad-hoc lump-sum top-up (FD / RD have a fixed amount; gratuity is paid by the employer). */
+const canTopUp = (i: Investment) => !i.closed && ['MUTUAL_FUND', 'PPF', 'NPS', 'STOCK'].includes(i.type)
+
+// The list is grouped by status, in this order.
+const GROUPS = ['Recurring', 'Paused / stopped', 'Lump sum & others', 'Closed']
+function statusOf(i: Investment) {
+  if (i.closed) return 'Closed'
+  if (isSip(i)) return i.sipPaused ? 'Paused / stopped' : 'Recurring'
+  if (i.type === 'RD' || (i.type === 'NPS' && i.monthlyContribution)) return 'Recurring'
+  return 'Lump sum & others'
+}
+
 export default function Investments() {
   const [tab, setTab] = useState<'long' | 'short'>('long')
   const stored = useTable('investments')
@@ -74,6 +87,7 @@ export default function Investments() {
   // Closed ones (when shown) go last.
   const rows = showClosed ? inTab && [...inTab].sort((a, b) => Number(!!a.closed) - Number(!!b.closed)) : open
   const [redeeming, setRedeeming] = useState<Investment | null>(null)
+  const [toppingUp, setToppingUp] = useState<Investment | null>(null)
 
   const market = marketReturn(open ?? [])
   const fixed = open?.filter(isFixedDeposit) ?? []
@@ -104,6 +118,10 @@ export default function Investments() {
         defaults={{ sipDay: String(new Date().getDate()), horizon: tab, type: tab === 'short' ? 'FD' : 'MUTUAL_FUND' }}
         noun="investment"
         prepare={prepare}
+        groupBy={(r) => [statusOf(r)]}
+        groupOrder={(a, b) => GROUPS.indexOf(a) - GROUPS.indexOf(b)}
+        groupsOpen
+        groupSummary={(list) => <><span className="row-value">{money(list.reduce((s, r) => s + valueOf(r), 0))}</span><span className="row-sub">value</span></>}
         empty={tab === 'long' ? 'No long-term investments yet. Add a mutual fund, PPF, NPS, gratuity or stock.' : 'No short-term investments yet. Add an FD, RD or stock.'}
         view={(r) => ({
           title: r.name,
@@ -119,9 +137,15 @@ export default function Investments() {
             : { value: money(r.currentValue ?? 0), valueSub: `invested ${money(r.investedAmount ?? 0)}` }),
           ...(r.closed && { badge: { text: 'closed', tone: 'info' as const } }),
         })}
-        actions={(r) => isRedeemable(r) && !r.closed && <button className="btn btn-small" onClick={() => setRedeeming(r)}>Redeem</button>}
+        actions={(r) => (
+          <>
+            {canTopUp(r) && <button className="btn btn-small" onClick={() => setToppingUp(r)}>Add lump sum</button>}
+            {isRedeemable(r) && !r.closed && <button className="btn btn-small" onClick={() => setRedeeming(r)}>Redeem</button>}
+          </>
+        )}
       />
       {redeeming && <RedeemSheet fund={redeeming} onClose={() => setRedeeming(null)} />}
+      {toppingUp && <TopUpSheet fund={toppingUp} onClose={() => setToppingUp(null)} />}
     </>
   )
 }
